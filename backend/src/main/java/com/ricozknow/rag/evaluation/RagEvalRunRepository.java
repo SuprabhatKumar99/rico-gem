@@ -1,0 +1,1 @@
+package com.ricozknow.rag.evaluation; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface RagEvalRunRepository extends JpaRepository<RagEvalRun,UUID>{ List<RagEvalRun> findTop20ByTenantIdOrderByStartedAtDesc(UUID tenantId); }

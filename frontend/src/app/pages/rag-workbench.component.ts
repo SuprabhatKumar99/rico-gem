@@ -1,0 +1,52 @@
+import { CommonModule } from "@angular/common";
+import { Component, OnInit } from "@angular/core";
+import { FormsModule } from "@angular/forms";
+import { ApiService } from "../core/api.service";
+import { Category, RagApiKey } from "../models";
+
+@Component({
+  selector: "rk-rag-workbench",
+  standalone: true,
+  imports: [CommonModule, FormsModule],
+  template: `
+    <div>
+      <p class="text-sm font-semibold text-slate-500">Retrieval augmented generation</p><h1 class="mt-1 text-3xl font-bold tracking-tight">RAG Workbench</h1>
+      <p class="mt-2 text-sm text-slate-500">Exercise search, grounded answers, conversations, feedback, API-key scopes, and evaluation runs against the backend.</p>
+      <p *ngIf="error" class="mt-5 rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{{ error }}</p><p *ngIf="message" class="mt-5 rounded-xl bg-emerald-50 p-3 text-sm text-emerald-700">{{ message }}</p>
+
+      <div class="mt-6 grid gap-6 xl:grid-cols-2">
+        <section class="rk-card p-6"><h2 class="font-bold">Grounded answer</h2><div class="mt-4 space-y-4"><input class="rk-input font-mono" [(ngModel)]="apiKey" placeholder="RAG API key"/><textarea class="rk-input min-h-28" [(ngModel)]="query" placeholder="Ask a question..."></textarea><div class="grid gap-3 md:grid-cols-3"><input class="rk-input" type="number" min="1" max="20" [(ngModel)]="topK" placeholder="Top K"/><select class="rk-select" [(ngModel)]="categoryId"><option value="">All categories</option><option *ngFor="let c of categories" [value]="c['id']">{{ c['name'] }}</option></select><input class="rk-input" [(ngModel)]="language" placeholder="Language"/></div><button class="rk-btn rk-btn-primary" [disabled]="busy || !apiKey.trim() || !query.trim()" (click)="answer()">{{ busy ? "Working…" : "Get grounded answer" }}</button></div></section>
+        <section class="rk-card p-6"><h2 class="font-bold">Semantic search</h2><div class="mt-4 space-y-4"><textarea class="rk-input min-h-28" [(ngModel)]="searchQuery" placeholder="Search the knowledge base..."></textarea><button class="rk-btn rk-btn-secondary" [disabled]="busy || !apiKey.trim() || !searchQuery.trim()" (click)="search()">Search</button></div><div *ngIf="searchResults.length" class="mt-5 space-y-3"><div *ngFor="let r of searchResults" class="rounded-xl border border-slate-200 p-4"><div class="flex justify-between gap-3"><b>{{ r.title }}</b><span class="text-xs">{{ r.score | number:'1.3-3' }}</span></div><p class="mt-2 text-sm text-slate-600">{{ r.content }}</p></div></div></section>
+      </div>
+
+      <section *ngIf="answerResult" class="rk-card mt-6 p-6"><h2 class="font-bold">Answer response</h2><pre class="mt-4 max-h-96 overflow-auto whitespace-pre-wrap rounded-xl bg-slate-950 p-4 text-xs text-white">{{ answerResult | json }}</pre><div class="mt-4 flex flex-wrap gap-2"><button class="rk-btn rk-btn-secondary" (click)="feedback('HELPFUL')">Helpful</button><button class="rk-btn rk-btn-secondary" (click)="feedback('NOT_HELPFUL')">Not helpful</button><input class="rk-input max-w-md" [(ngModel)]="feedbackComment" placeholder="Optional feedback comment"/></div></section>
+
+      <div class="mt-6 grid gap-6 xl:grid-cols-2">
+        <section class="rk-card p-6"><div class="flex justify-between"><div><h2 class="font-bold">Conversations</h2><p class="mt-1 text-xs text-slate-500">Conversation endpoints require the same RAG API key.</p></div><button class="rk-btn rk-btn-secondary" (click)="loadConversations()">Refresh</button></div><button class="rk-btn rk-btn-primary mt-4" (click)="newConversation()">New conversation</button><div class="mt-4 space-y-2"><div *ngFor="let c of conversations" class="flex items-center gap-2 rounded-xl border border-slate-200 p-3"><button class="min-w-0 flex-1 text-left" (click)="openConversation(c['id'])"><b class="block truncate">{{ c['name'] || c['title'] || c['id'] }}</b></button><button class="text-xs" (click)="renameConversation(c)">Rename</button><button class="text-xs text-rose-600" (click)="deleteConversation(c)">Delete</button></div></div><pre *ngIf="conversation" class="mt-4 max-h-72 overflow-auto whitespace-pre-wrap bg-slate-50 p-3 text-xs">{{ conversation | json }}</pre></section>
+        <section class="rk-card p-6"><h2 class="font-bold">API-key scopes</h2><div class="mt-4 space-y-3"><select class="rk-select" [(ngModel)]="scopeKeyId" (change)="loadScopes()"><option value="">Select a key</option><option *ngFor="let k of keys" [value]="k.id">{{ k.name }} · {{ k.prefix }}</option></select><textarea class="rk-input min-h-28 font-mono" [(ngModel)]="scopesText" placeholder="rag:search\nrag:answer"></textarea><button class="rk-btn rk-btn-primary" [disabled]="!scopeKeyId" (click)="saveScopes()">Save scopes</button></div></section>
+      </div>
+
+      <section class="rk-card mt-6 p-6"><div class="flex flex-wrap items-center justify-between gap-3"><div><h2 class="font-bold">Evaluation</h2><p class="mt-1 text-xs text-slate-500">Create evaluation cases and run the backend evaluator.</p></div><button class="rk-btn rk-btn-secondary" (click)="loadRuns()">Refresh runs</button></div><div class="mt-4 grid gap-3 md:grid-cols-2"><input class="rk-input" [(ngModel)]="evalQuestion" placeholder="Evaluation question"/><input class="rk-input" [(ngModel)]="expectedAnswer" placeholder="Expected answer (optional)"/></div><div class="mt-3 flex gap-2"><button class="rk-btn rk-btn-secondary" (click)="createCase()">Create case</button><button class="rk-btn rk-btn-primary" (click)="runEvaluation()">Run evaluation</button></div><div *ngIf="runs.length" class="mt-5 overflow-auto"><table class="w-full text-left text-sm"><thead><tr class="border-b"><th class="p-2">ID</th><th class="p-2">Status</th><th class="p-2">Created</th><th class="p-2">Details</th></tr></thead><tbody><tr *ngFor="let r of runs" class="border-b"><td class="p-2 font-mono text-xs">{{ r['id'] }}</td><td class="p-2">{{ r['status'] || r['state'] || '—' }}</td><td class="p-2">{{ r['createdAt'] || '—' }}</td><td class="p-2"><pre class="max-w-lg whitespace-pre-wrap text-xs">{{ r | json }}</pre></td></tr></tbody></table></div></section>
+    </div>
+  `
+})
+export class RagWorkbenchComponent implements OnInit {
+  keys: RagApiKey[] = []; categories: Category[] = []; conversations: Record<string, any>[] = []; conversation: unknown = null; runs: Record<string, any>[] = []; searchResults: any[] = [];
+  apiKey = ""; query = ""; searchQuery = ""; topK = 5; categoryId = ""; language = "en"; busy = false; answerResult: any = null; feedbackComment = ""; scopeKeyId = ""; scopesText = ""; evalQuestion = ""; expectedAnswer = ""; error = ""; message = "";
+  constructor(private readonly api: ApiService) {}
+  ngOnInit(): void { this.api.categories().subscribe({next:x=>this.categories=x,error:()=>{}}); this.api.ragApiKeys().subscribe({next:x=>this.keys=x,error:e=>this.error=e?.error?.message||"Could not load RAG keys."}); this.loadRuns(); }
+  answer(): void { this.busy=true; this.clear(); this.api.ragAnswer({query:this.query.trim(),topK:Number(this.topK)||5,categoryId:this.categoryId||undefined,language:this.language||undefined},this.apiKey.trim()).subscribe({next:x=>{this.answerResult=x;this.busy=false;},error:e=>{this.error=e?.error?.message||"RAG answer failed.";this.busy=false;}}); }
+  search(): void { this.busy=true; this.clear(); this.api.ragSearch(this.apiKey.trim(),this.searchQuery.trim(),Math.min(20,Math.max(1,Number(this.topK)||5)),this.categoryId||undefined).subscribe({next:x=>{this.searchResults=x.results;this.busy=false;},error:e=>{this.error=e?.error?.message||"RAG search failed.";this.busy=false;}}); }
+  feedback(rating:string): void { const id=(this.answerResult?.answerId||this.answerResult?.id); if(!id){this.error="The answer response did not expose an answer ID for feedback.";return;} this.api.ragFeedback({answerId:String(id),rating,comment:this.feedbackComment||undefined},this.apiKey.trim()).subscribe({next:()=>this.message="Feedback submitted.",error:e=>this.error=e?.error?.message||"Feedback failed."}); }
+  loadConversations():void{this.api.ragConversations(this.apiKey.trim()).subscribe({next:x=>this.conversations=x,error:e=>this.error=e?.error?.message||"Could not load conversations."});}
+  newConversation():void{this.api.createRagConversation(this.apiKey.trim()).subscribe({next:x=>{this.conversation=x;this.loadConversations();},error:e=>this.error=e?.error?.message||"Could not create conversation."});}
+  openConversation(id:string):void{this.api.ragConversation(id,this.apiKey.trim()).subscribe({next:x=>this.conversation=x,error:e=>this.error=e?.error?.message||"Could not load conversation."});}
+  renameConversation(c:Record<string,any>):void{const name=prompt("New conversation name",c['name']||c['title']||"");if(name===null)return;this.api.renameRagConversation(String(c['id']),name,this.apiKey.trim()).subscribe({next:()=>this.loadConversations(),error:e=>this.error=e?.error?.message||"Could not rename conversation."});}
+  deleteConversation(c:Record<string,any>):void{if(!confirm("Delete this conversation?"))return;this.api.deleteRagConversation(String(c['id']),this.apiKey.trim()).subscribe({next:()=>this.loadConversations(),error:e=>this.error=e?.error?.message||"Could not delete conversation."});}
+  loadScopes():void{if(!this.scopeKeyId)return;this.api.apiKeyScopes(this.scopeKeyId).subscribe({next:x=>this.scopesText=x.join("\n"),error:e=>this.error=e?.error?.message||"Could not load scopes."});}
+  saveScopes():void{this.api.updateApiKeyScopes(this.scopeKeyId,this.scopesText.split(/\r?\n|,/).map(x=>x.trim()).filter(Boolean)).subscribe({next:x=>{this.scopesText=x.join("\n");this.message="API-key scopes saved.";},error:e=>this.error=e?.error?.message||"Could not save scopes."});}
+  createCase():void{if(!this.evalQuestion.trim())return;this.api.createRagEvalCase({question:this.evalQuestion.trim(),expectedAnswer:this.expectedAnswer.trim()||undefined,enabled:true}).subscribe({next:()=>{this.message="Evaluation case created.";this.evalQuestion="";this.expectedAnswer="";},error:e=>this.error=e?.error?.message||"Could not create evaluation case."});}
+  runEvaluation():void{this.api.runRagEvaluation().subscribe({next:x=>{this.message="Evaluation run started.";this.runs=[x as any,...this.runs];},error:e=>this.error=e?.error?.message||"Could not run evaluation."});}
+  loadRuns():void{this.api.ragEvaluationRuns().subscribe({next:x=>this.runs=x,error:()=>this.runs=[]});}
+  clear():void{this.error="";this.message="";}
+}

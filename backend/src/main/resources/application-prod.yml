@@ -1,0 +1,98 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST}:${DB_PORT:5432}/${DB_NAME}
+    username: ${DB_USER:${DB_USERNAME:}}
+    password: ${DB_PASSWORD}
+  data:
+    redis:
+      host: ${REDIS_HOST}
+      port: ${REDIS_PORT:6379}
+  mail:
+    host: ${MAIL_HOST}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME}
+    password: ${MAIL_PASSWORD}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
+  servlet:
+    multipart:
+      max-file-size: ${MULTIPART_MAX_FILE_SIZE:25MB}
+      max-request-size: ${MULTIPART_MAX_REQUEST_SIZE:30MB}
+
+opensearch:
+  host: ${OPENSEARCH_HOST}
+  port: ${OPENSEARCH_PORT:9200}
+  scheme: ${OPENSEARCH_SCHEME:https}
+
+storage:
+  s3:
+    endpoint: ${S3_ENDPOINT}
+    bucket: ${S3_BUCKET}
+    access-key: ${S3_ACCESS_KEY}
+    secret-key: ${S3_SECRET_KEY}
+    region: ${S3_REGION:us-east-1}
+
+ricozknow:
+  saml:
+    base-url: ${SAML_BASE_URL}
+  security:
+    secrets:
+      keys: ${RICOZ_SECRET_KEYS}
+      active-key: ${RICOZ_SECRET_ACTIVE_KEY}
+    jwt:
+      secret: ${JWT_SECRET}
+      refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:true}
+      refresh-cookie-same-site: ${REFRESH_COOKIE_SAME_SITE:None}
+    rag:
+      enabled: ${RAG_ENABLED:false}
+  ai:
+    generation:
+      provider: ${AI_GENERATION_PROVIDER:${RAG_GENERATION_PROVIDER:openai-compatible}}
+      url: ${AI_GENERATION_URL:${RAG_GENERATION_URL:https://api.openai.com/v1/chat/completions}}
+      api-key: ${AI_GENERATION_API_KEY:${RAG_GENERATION_API_KEY:}}
+      model: ${AI_GENERATION_MODEL:${RAG_GENERATION_MODEL:gpt-4o-mini}}
+      input-cost-per-1k-tokens: ${AI_GENERATION_INPUT_COST_PER_1K:${RAG_GENERATION_INPUT_COST_PER_1K:0.00015}}
+      output-cost-per-1k-tokens: ${AI_GENERATION_OUTPUT_COST_PER_1K:${RAG_GENERATION_OUTPUT_COST_PER_1K:0.00060}}
+    embedding:
+      provider: ${AI_EMBEDDING_PROVIDER:${RAG_EMBEDDING_PROVIDER:openai-compatible}}
+      url: ${AI_EMBEDDING_URL:${RAG_EMBEDDING_URL:https://api.openai.com/v1/embeddings}}
+      api-key: ${AI_EMBEDDING_API_KEY:${RAG_EMBEDDING_API_KEY:}}
+      model: ${AI_EMBEDDING_MODEL:${RAG_EMBEDDING_MODEL:text-embedding-3-small}}
+      dimension: ${AI_EMBEDDING_DIMENSION:${RAG_EMBEDDING_DIMENSION:1536}}
+      cost-per-1k-tokens: ${AI_EMBEDDING_COST_PER_1K:${RAG_EMBEDDING_COST_PER_1K:0.00002}}
+    ollama:
+      generation-url: ${OLLAMA_GENERATION_URL:http://localhost:11434/api/chat}
+      embedding-url: ${OLLAMA_EMBEDDING_URL:http://localhost:11434/api/embeddings}
+    answer:
+      min-score: ${AI_RAG_ANSWER_MIN_SCORE:${RAG_ANSWER_MIN_SCORE:0.18}}
+      max-context-chars: ${AI_RAG_ANSWER_MAX_CONTEXT_CHARS:${RAG_ANSWER_MAX_CONTEXT_CHARS:12000}}
+  customer:
+    cookie-secure: ${CUSTOMER_COOKIE_SECURE:true}
+    cookie-same-site: ${CUSTOMER_COOKIE_SAME_SITE:None}
+  widget:
+    frontend-base-url: ${WIDGET_FRONTEND_BASE_URL}
+  support:
+    fallback-email: ${SUPPORT_FALLBACK_EMAIL:}
+  email:
+    from: ${MAIL_FROM}
+    frontend-base-url: ${FRONTEND_BASE_URL}
+  tenant:
+    base-domain: ${TENANT_BASE_DOMAIN}
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoint:
+    health:
+      show-details: never
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}

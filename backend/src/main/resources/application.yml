@@ -1,0 +1,261 @@
+spring:
+  application:
+    name: ricozknow-backend
+  config:
+    import: optional:classpath:/saml.yml
+
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:rz-postgres}:${DB_PORT:5432}/${DB_NAME:ricozknow}
+    username: ${DB_USER:}
+    password: ${DB_PASSWORD:}
+    hikari:
+      maximum-pool-size: 10
+
+  jpa:
+    hibernate:
+      ddl-auto: validate # Flyway owns the schema
+    open-in-view: false
+    properties:
+      hibernate:
+        jdbc:
+          time_zone: UTC
+        format_sql: false
+
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 12MB
+
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:587}
+    username: ${MAIL_USERNAME:}
+    password: ${MAIL_PASSWORD:}
+    properties:
+      mail:
+        smtp:
+          auth: ${MAIL_SMTP_AUTH:true}
+          starttls:
+            enable: ${MAIL_SMTP_STARTTLS:true}
+
+opensearch:
+  host: ${OPENSEARCH_HOST:localhost}
+  port: ${OPENSEARCH_PORT:9200}
+  scheme: ${OPENSEARCH_SCHEME:http}
+
+storage:
+  s3:
+    endpoint: ${S3_ENDPOINT:http://localhost:9000}
+    bucket: ${S3_BUCKET:ricozknow-assets}
+    access-key: ${S3_ACCESS_KEY:}
+    secret-key: ${S3_SECRET_KEY:}
+    region: ${S3_REGION:us-east-1}
+
+ricozknow:
+  social:
+    callback-base-url: ${RICOZ_SOCIAL_CALLBACK_BASE_URL:http://localhost:8080}
+    google:
+      client-id: ${RICOZ_SOCIAL_GOOGLE_CLIENT_ID:}
+      client-secret: ${RICOZ_SOCIAL_GOOGLE_CLIENT_SECRET:}
+    microsoft:
+      client-id: ${RICOZ_SOCIAL_MICROSOFT_CLIENT_ID:}
+      client-secret: ${RICOZ_SOCIAL_MICROSOFT_CLIENT_SECRET:}
+  mcp:
+    enabled: ${RICOZ_MCP_ENABLED:false}
+    writes-enabled: ${RICOZ_MCP_WRITES_ENABLED:false}
+    requests-per-minute: ${RICOZ_MCP_RPM:60}
+    allowed-origins: ${RICOZ_MCP_ALLOWED_ORIGINS:}
+  collaboration:
+    internal-secret: ${RICOZ_COLLAB_INTERNAL_SECRET:}
+    ws-url: ${RICOZ_COLLAB_WS_URL:}
+  # Semantic expansion only accesses live-authorized PUBLIC RAG chunks (not connector text).
+  enterprise-search:
+    hybrid-enabled: ${RICOZ_ENTERPRISE_SEARCH_HYBRID_ENABLED:false}
+  connectors:
+    callback-base: ${RICOZ_CONNECTOR_CALLBACK_BASE:}
+    frontend-url: ${RICOZ_CONNECTOR_FRONTEND_URL:http://localhost:4200}
+    encryption-key: ${RICOZ_CONNECTOR_ENCRYPTION_KEY:}
+    scheduler-ms: ${RICOZ_CONNECTOR_SCHEDULER_MS:60000}
+    google:
+      client-id: ${RICOZ_CONNECTOR_GOOGLE_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_GOOGLE_CLIENT_SECRET:}
+    notion:
+      client-id: ${RICOZ_CONNECTOR_NOTION_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_NOTION_CLIENT_SECRET:}
+    confluence:
+      client-id: ${RICOZ_CONNECTOR_CONFLUENCE_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_CONFLUENCE_CLIENT_SECRET:}
+    sharepoint:
+      client-id: ${RICOZ_CONNECTOR_SHAREPOINT_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_SHAREPOINT_CLIENT_SECRET:}
+    slack:
+      client-id: ${RICOZ_CONNECTOR_SLACK_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_SLACK_CLIENT_SECRET:}
+      signing-secret: ${RICOZ_CONNECTOR_SLACK_SIGNING_SECRET:}
+    github:
+      client-id: ${RICOZ_CONNECTOR_GITHUB_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_GITHUB_CLIENT_SECRET:}
+      webhook-secret: ${RICOZ_CONNECTOR_GITHUB_WEBHOOK_SECRET:}
+    jira:
+      client-id: ${RICOZ_CONNECTOR_JIRA_CLIENT_ID:}
+      client-secret: ${RICOZ_CONNECTOR_JIRA_CLIENT_SECRET:}
+  article:
+    require-independent-review: ${RICOZKNOW_ARTICLE_REQUIRE_INDEPENDENT_REVIEW:false}
+    schedule-check-ms: ${RICOZKNOW_ARTICLE_SCHEDULE_CHECK_MS:30000}
+    governance-cron: ${RICOZKNOW_ARTICLE_GOVERNANCE_CRON:0 15 3 * * *}
+    expiry-cron: ${RICOZKNOW_ARTICLE_EXPIRY_CRON:0 0 3 * * *}
+  saml:
+    base-url: ${SAML_BASE_URL:http://localhost:8080}
+  security:
+    secrets:
+      keys: ${RICOZ_SECRET_KEYS:}
+      active-key: ${RICOZ_SECRET_ACTIVE_KEY:}
+    mfa:
+      max-attempts: ${MFA_MAX_ATTEMPTS:5}
+      window-minutes: ${MFA_WINDOW_MINUTES:15}
+    jwt:
+      secret: ${JWT_SECRET:}
+      access-token-ttl-minutes: 30
+      refresh-token-ttl-days: 14
+      
+      refresh-cookie-secure: ${REFRESH_COOKIE_SECURE:false} # only ever set to false for local http-only dev; never in production
+      refresh-cookie-same-site: ${REFRESH_COOKIE_SAME_SITE:Lax}
+
+      agent-access-token-ttl-minutes: 5 # AGENT_VIEWER-only principals (machine clients) get a much shorter blast radius if leaked
+      agent-refresh-token-ttl-days: 1
+      customer-access-token-ttl-days: 7 # customers re-authenticate via a fresh magic link rather than a refresh-token flow — see CustomerAuthService
+    
+    login-rate-limit:
+      max-attempts: ${LOGIN_MAX_ATTEMPTS:5}
+      ip-max-attempts: ${LOGIN_IP_MAX_ATTEMPTS:30}
+      window-minutes: 15
+    rate-limits:
+      search:
+        max-requests: 30
+        window-seconds: 60
+      asset-upload:
+        max-requests: 20
+        window-seconds: 60
+      rag:
+        max-requests: ${RAG_MAX_REQUESTS:60}
+        window-seconds: ${RAG_RATE_WINDOW_SECONDS:60}
+    webhooks:
+      ssrf-guard-enabled: ${SSRF_GUARD_ENABLED:true} # must stay true in every real deployment; see SsrfGuard's class doc
+    customer-auth:
+      magic-link-ttl-minutes: ${CUSTOMER_MAGIC_LINK_TTL_MINUTES:20}
+    customer:
+      magic-link-ttl-minutes: ${CUSTOMER_MAGIC_LINK_TTL_MINUTES:20}
+      cookie-secure: ${CUSTOMER_COOKIE_SECURE:false}
+      cookie-same-site: ${CUSTOMER_COOKIE_SAME_SITE:Lax}
+  widget:
+    frontend-base-url: ${WIDGET_FRONTEND_BASE_URL:http://localhost:4200}
+    rag:
+      enabled: ${RAG_ENABLED:true}
+      # Legacy RAG settings retained for compatibility with existing deployments.
+      embedding:
+        dimension: ${AI_EMBEDDING_DIMENSION:${RAG_EMBEDDING_DIMENSION:1536}}
+      cost:
+        embedding-per-1k-tokens: ${AI_EMBEDDING_COST_PER_1K:${RAG_EMBEDDING_COST_PER_1K:0.00002}}
+      chunk:
+        max-chars: ${RAG_CHUNK_MAX_CHARS:1800}
+  ai:
+    # Phase 5: these request quotas apply tenant-by-tenant, including the existing generation API.
+    max-requests-per-tenant-month: ${RICOZ_AI_MONTHLY_REQUEST_LIMIT:2000}
+    usage:
+      # Set to provider/model-specific contractual prices only when accurate; 0 means unknown.
+      input-usd-per-1k: ${RICOZ_AI_INPUT_USD_PER_1K:0}
+      output-usd-per-1k: ${RICOZ_AI_OUTPUT_USD_PER_1K:0}
+    generation:
+      failover-providers: ${RICOZ_AI_FAILOVER_PROVIDERS:}
+      # Supported: openai-compatible, openai, huggingface, custom, ollama.
+      # openai/openai-compatible/huggingface/custom use the OpenAI-compatible adapter.
+      provider: ${AI_GENERATION_PROVIDER:${RAG_GENERATION_PROVIDER:openai-compatible}}
+      url: ${AI_GENERATION_URL:${RAG_GENERATION_URL:https://api.openai.com/v1/chat/completions}}
+      api-key: ${AI_GENERATION_API_KEY:${RAG_GENERATION_API_KEY:}}
+      model: ${AI_GENERATION_MODEL:${RAG_GENERATION_MODEL:gpt-4o-mini}}
+      input-cost-per-1k-tokens: ${AI_GENERATION_INPUT_COST_PER_1K:${RAG_GENERATION_INPUT_COST_PER_1K:0.00015}}
+      output-cost-per-1k-tokens: ${AI_GENERATION_OUTPUT_COST_PER_1K:${RAG_GENERATION_OUTPUT_COST_PER_1K:0.00060}}
+    embedding:
+      provider: ${AI_EMBEDDING_PROVIDER:${RAG_EMBEDDING_PROVIDER:openai-compatible}}
+      url: ${AI_EMBEDDING_URL:${RAG_EMBEDDING_URL:https://api.openai.com/v1/embeddings}}
+      api-key: ${AI_EMBEDDING_API_KEY:${RAG_EMBEDDING_API_KEY:}}
+      model: ${AI_EMBEDDING_MODEL:${RAG_EMBEDDING_MODEL:text-embedding-3-small}}
+      dimension: ${AI_EMBEDDING_DIMENSION:${RAG_EMBEDDING_DIMENSION:1536}}
+      cost-per-1k-tokens: ${AI_EMBEDDING_COST_PER_1K:${RAG_EMBEDDING_COST_PER_1K:0.00002}}
+    ollama:
+      generation-url: ${OLLAMA_GENERATION_URL:http://localhost:11434/api/chat}
+      embedding-url: ${OLLAMA_EMBEDDING_URL:http://localhost:11434/api/embeddings}
+    answer:
+      min-score: ${AI_RAG_ANSWER_MIN_SCORE:${RAG_ANSWER_MIN_SCORE:0.18}}
+      max-context-chars: ${AI_RAG_ANSWER_MAX_CONTEXT_CHARS:${RAG_ANSWER_MAX_CONTEXT_CHARS:12000}}
+  email:
+    from: ${MAIL_FROM:no-reply@ricozknow.com}
+    frontend-base-url: ${FRONTEND_BASE_URL:http://*.ricozknow.com:4200}
+    verification-ttl-hours: ${EMAIL_VERIFICATION_TTL_HOURS:24}
+    password-reset-ttl-minutes: ${PASSWORD_RESET_TTL_MINUTES:30}
+    invitation-ttl-hours: ${INVITATION_TTL_HOURS:72}
+  support:
+    fallback-email: ${SUPPORT_FALLBACK_EMAIL:}
+  tenant:
+    base-domain: ${TENANT_BASE_DOMAIN:ricozknow.com}
+  knowledge:
+    sync-check-ms: ${KNOWLEDGE_SYNC_CHECK_MS:60000}
+    max-file-size-bytes: ${KNOWLEDGE_MAX_FILE_SIZE_BYTES:26214400}
+    max-bulk-files: ${KNOWLEDGE_MAX_BULK_FILES:20}
+
+server:
+  port: ${SERVER_PORT:8080}
+  shutdown: graceful
+
+management:
+  server:
+    port: ${MANAGEMENT_PORT:8081}
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      show-details: when_authorized
+      probes:
+        enabled: true
+      group:
+        readiness:
+          include: readinessState,db,redis,opensearch
+        liveness:
+          include: livenessState
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: ${TRACING_SAMPLING_PROBABILITY:0.1}
+  otlp:
+    metrics:
+      export:
+        enabled: ${OTEL_METRICS_ENABLED:false}
+        url: ${OTEL_METRICS_URL:http://localhost:4318/v1/metrics}
+        step: ${OTEL_METRICS_STEP:30s}
+    tracing:
+      endpoint: ${OTEL_TRACING_ENDPOINT:http://localhost:4318/v1/traces}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+logging:
+  level:
+    com.ricozknow: INFO
+    org.springframework.security: INFO
+    software.amazon.awssdk: INFO
+

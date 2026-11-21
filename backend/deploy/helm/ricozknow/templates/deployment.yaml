@@ -1,0 +1,19 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: ricozknow}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector: {matchLabels: {app: ricozknow}}
+  template:
+    metadata: {labels: {app: ricozknow}}
+    spec:
+      containers:
+        - name: backend
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports: [{containerPort: 8080}]
+          env:
+            - {name: DB_HOST, value: "{{ .Values.env.DB_HOST }}"}
+            - {name: REDIS_HOST, value: "{{ .Values.env.REDIS_HOST }}"}
+            - {name: OPENSEARCH_HOST, value: "{{ .Values.env.OPENSEARCH_HOST }}"}
+          readinessProbe: {httpGet: {path: /actuator/health/readiness, port: 8081}}
+          livenessProbe: {httpGet: {path: /actuator/health/liveness, port: 8081}}

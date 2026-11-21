@@ -1,0 +1,372 @@
+# RicozKnow phase 0-8 + social login backend (Flyway V39)
+# Use from ORIGINAL compose directory to preserve existing named volumes.
+# Optional profiles: --profile frontend / --profile collaboration / --profile observability
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rz-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${DB_NAME:-ricozknow}
+      POSTGRES_USER: ${DB_USER:-ricozknow}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?Set a rotated PostgreSQL password in .env}
+    ports:
+      - 5432:5432
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [default]
+
+  redis:
+    image: redis:7-alpine
+    container_name: rz-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    networks: [default]
+
+  opensearch:
+    image: opensearchproject/opensearch:2.15.0
+    container_name: rz-opensearch
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: ${OPENSEARCH_JAVA_OPTS:--Xms512m -Xmx512m}
+    ports:
+      - 9200:9200
+    volumes:
+      - opensearch-data:/usr/share/opensearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://localhost:9200/_cluster/health >/dev/null || exit 1"]
+      interval: 20s
+      timeout: 10s
+      start_period: 60s
+      retries: 10
+    networks: [default]
+
+  minio:
+    image: cgr.dev/chainguard/minio
+    container_name: rz-minio
+    restart: unless-stopped
+    command: server /data --console-address ':9001'
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?Set a non-default MinIO user in .env}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?Set a strong MinIO password in .env}
+    ports:
+      - "9000:9000"
+      - "9001:9001"
+    volumes:
+      - minio-data:/data
+    networks: [default]
+
+  backend:
+
+    build: 
+      context: ../backend
+      dockerfile: Dockerfile
+    
+    container_name: rz-backend
+    
+   
+
+    restart: unless-stopped
+    environment:
+      # SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
+      SERVER_PORT: 8080
+      MANAGEMENT_PORT: ${MANAGEMENT_PORT:-8081}
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-ricozknow}
+      DB_USER: ${DB_USER:-ricozknow}
+      DB_PASSWORD: ${DB_PASSWORD:?Set a rotated database password}
+      REDIS_HOST: rz-redis
+      REDIS_PORT: 6379
+      OPENSEARCH_HOST: opensearch
+      OPENSEARCH_PORT: 9200
+      OPENSEARCH_SCHEME: http
+      S3_ENDPOINT: ${S3_ENDPOINT:-http://rz-minio:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-ricozknow-assets}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?Set real S3 credentials}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?Set real S3 credentials}
+      JWT_SECRET: ${JWT_SECRET:?Set JWT secret}
+      RICOZ_SECRET_KEYS: ${RICOZ_SECRET_KEYS:?Set versioned encryption key ring in .env}
+      RICOZ_SECRET_ACTIVE_KEY: ${RICOZ_SECRET_ACTIVE_KEY:?Set key ring active key ID in .env}
+      TENANT_BASE_DOMAIN: ${TENANT_BASE_DOMAIN:?Set tenant base domain}
+      FRONTEND_BASE_URL: ${FRONTEND_BASE_URL:?Set HTTPS frontend origin}
+      WIDGET_FRONTEND_BASE_URL: ${WIDGET_FRONTEND_BASE_URL:-${FRONTEND_BASE_URL}}
+      ALLOWED_ORIGINS: ${ALLOWED_ORIGINS:?http://*.ricozknow.com}
+      RICOZ_COOKIE_TRUSTED_ORIGINS: ${RICOZ_COOKIE_TRUSTED_ORIGINS:?Set trusted cookie origin}
+      REFRESH_COOKIE_SECURE: ${REFRESH_COOKIE_SECURE:-true}
+      REFRESH_COOKIE_SAME_SITE: ${REFRESH_COOKIE_SAME_SITE:-Lax}
+      RICOZ_CUSTOMER_COOKIE_SECURE: ${RICOZ_CUSTOMER_COOKIE_SECURE:-true}
+      RICOZ_CUSTOMER_COOKIE_SAMESITE: ${RICOZ_CUSTOMER_COOKIE_SAMESITE:-Lax}
+      CUSTOMER_COOKIE_SECURE: ${CUSTOMER_COOKIE_SECURE:-true}
+      CUSTOMER_COOKIE_SAME_SITE: ${CUSTOMER_COOKIE_SAME_SITE:-Lax}
+      SAML_BASE_URL: ${SAML_BASE_URL:?Set public HTTPS callback origin}
+      RICOZ_SOCIAL_CALLBACK_BASE_URL: ${RICOZ_SOCIAL_CALLBACK_BASE_URL:?Set public HTTPS callback origin}
+      RICOZ_SOCIAL_GOOGLE_CLIENT_ID: ${RICOZ_SOCIAL_GOOGLE_CLIENT_ID:-}
+      RICOZ_SOCIAL_GOOGLE_CLIENT_SECRET: ${RICOZ_SOCIAL_GOOGLE_CLIENT_SECRET:-}
+      RICOZ_SOCIAL_MICROSOFT_CLIENT_ID: ${RICOZ_SOCIAL_MICROSOFT_CLIENT_ID:-}
+      RICOZ_SOCIAL_MICROSOFT_CLIENT_SECRET: ${RICOZ_SOCIAL_MICROSOFT_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_CALLBACK_BASE: ${RICOZ_CONNECTOR_CALLBACK_BASE:-}
+      RICOZ_CONNECTOR_FRONTEND_URL: ${RICOZ_CONNECTOR_FRONTEND_URL:-}
+      RICOZ_CONNECTOR_ENCRYPTION_KEY: ${RICOZ_CONNECTOR_ENCRYPTION_KEY:-}
+      RICOZ_CONNECTOR_SCHEDULER_MS: ${RICOZ_CONNECTOR_SCHEDULER_MS:-60000}
+      RICOZ_CONNECTOR_GOOGLE_CLIENT_ID: ${RICOZ_CONNECTOR_GOOGLE_CLIENT_ID:-}
+      RICOZ_CONNECTOR_GOOGLE_CLIENT_SECRET: ${RICOZ_CONNECTOR_GOOGLE_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_NOTION_CLIENT_ID: ${RICOZ_CONNECTOR_NOTION_CLIENT_ID:-}
+      RICOZ_CONNECTOR_NOTION_CLIENT_SECRET: ${RICOZ_CONNECTOR_NOTION_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_CONFLUENCE_CLIENT_ID: ${RICOZ_CONNECTOR_CONFLUENCE_CLIENT_ID:-}
+      RICOZ_CONNECTOR_CONFLUENCE_CLIENT_SECRET: ${RICOZ_CONNECTOR_CONFLUENCE_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_SHAREPOINT_CLIENT_ID: ${RICOZ_CONNECTOR_SHAREPOINT_CLIENT_ID:-}
+      RICOZ_CONNECTOR_SHAREPOINT_CLIENT_SECRET: ${RICOZ_CONNECTOR_SHAREPOINT_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_SLACK_CLIENT_ID: ${RICOZ_CONNECTOR_SLACK_CLIENT_ID:-}
+      RICOZ_CONNECTOR_SLACK_CLIENT_SECRET: ${RICOZ_CONNECTOR_SLACK_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_SLACK_SIGNING_SECRET: ${RICOZ_CONNECTOR_SLACK_SIGNING_SECRET:-}
+      RICOZ_CONNECTOR_GITHUB_CLIENT_ID: ${RICOZ_CONNECTOR_GITHUB_CLIENT_ID:-}
+      RICOZ_CONNECTOR_GITHUB_CLIENT_SECRET: ${RICOZ_CONNECTOR_GITHUB_CLIENT_SECRET:-}
+      RICOZ_CONNECTOR_GITHUB_WEBHOOK_SECRET: ${RICOZ_CONNECTOR_GITHUB_WEBHOOK_SECRET:-}
+      RICOZ_CONNECTOR_JIRA_CLIENT_ID: ${RICOZ_CONNECTOR_JIRA_CLIENT_ID:-}
+      RICOZ_CONNECTOR_JIRA_CLIENT_SECRET: ${RICOZ_CONNECTOR_JIRA_CLIENT_SECRET:-}
+      MFA_MAX_ATTEMPTS: ${MFA_MAX_ATTEMPTS:-5}
+      MFA_WINDOW_MINUTES: ${MFA_WINDOW_MINUTES:-15}
+      LOGIN_MAX_ATTEMPTS: ${LOGIN_MAX_ATTEMPTS:-5}
+      LOGIN_IP_MAX_ATTEMPTS: ${LOGIN_IP_MAX_ATTEMPTS:-30}
+      RICOZKNOW_AUDIT_RETENTION_ENABLED: ${RICOZKNOW_AUDIT_RETENTION_ENABLED:-false}
+      SSRF_GUARD_ENABLED: 'true'
+      MAIL_HOST: ${MAIL_HOST:-smtp.gmail.com}
+      MAIL_PORT: ${MAIL_PORT:-587}
+      MAIL_USERNAME: ${MAIL_USERNAME:-}
+      MAIL_PASSWORD: ${MAIL_PASSWORD:?Production backend requires an SMTP password}
+      MAIL_SMTP_AUTH: ${MAIL_SMTP_AUTH:-true}
+      MAIL_SMTP_STARTTLS: ${MAIL_SMTP_STARTTLS:-true}
+      MAIL_FROM: ${MAIL_FROM:-}
+      EMAIL_VERIFICATION_TTL_HOURS: ${EMAIL_VERIFICATION_TTL_HOURS:-24}
+      PASSWORD_RESET_TTL_MINUTES: ${PASSWORD_RESET_TTL_MINUTES:-30}
+      INVITATION_TTL_HOURS: ${INVITATION_TTL_HOURS:-72}
+      SUPPORT_FALLBACK_EMAIL: ${SUPPORT_FALLBACK_EMAIL:-}
+      CUSTOMER_MAGIC_LINK_TTL_MINUTES: ${CUSTOMER_MAGIC_LINK_TTL_MINUTES:-20}
+      MULTIPART_MAX_FILE_SIZE: ${MULTIPART_MAX_FILE_SIZE:-25MB}
+      MULTIPART_MAX_REQUEST_SIZE: ${MULTIPART_MAX_REQUEST_SIZE:-30MB}
+      KNOWLEDGE_SYNC_CHECK_MS: ${KNOWLEDGE_SYNC_CHECK_MS:-60000}
+      KNOWLEDGE_MAX_FILE_SIZE_BYTES: ${KNOWLEDGE_MAX_FILE_SIZE_BYTES:-26214400}
+      KNOWLEDGE_MAX_BULK_FILES: ${KNOWLEDGE_MAX_BULK_FILES:-20}
+      RAG_MAX_REQUESTS: ${RAG_MAX_REQUESTS:-60}
+      RAG_RATE_WINDOW_SECONDS: ${RAG_RATE_WINDOW_SECONDS:-60}
+      RAG_CHUNK_MAX_CHARS: ${RAG_CHUNK_MAX_CHARS:-1800}
+      AI_RAG_ANSWER_MIN_SCORE: ${AI_RAG_ANSWER_MIN_SCORE:-0.18}
+      AI_RAG_ANSWER_MAX_CONTEXT_CHARS: ${AI_RAG_ANSWER_MAX_CONTEXT_CHARS:-12000}
+      RAG_ENABLED: ${RAG_ENABLED:-false}
+      AI_GENERATION_PROVIDER: ${AI_GENERATION_PROVIDER:-huggingface}
+      AI_GENERATION_URL: ${AI_GENERATION_URL:-}
+      AI_GENERATION_API_KEY: ${AI_GENERATION_API_KEY:-}
+      AI_GENERATION_MODEL: ${AI_GENERATION_MODEL:-}
+      AI_EMBEDDING_PROVIDER: ${AI_EMBEDDING_PROVIDER:-huggingface}
+      AI_EMBEDDING_URL: ${AI_EMBEDDING_URL:-}
+      AI_EMBEDDING_API_KEY: ${AI_EMBEDDING_API_KEY:-}
+      AI_EMBEDDING_MODEL: ${AI_EMBEDDING_MODEL:-}
+      AI_EMBEDDING_DIMENSION: ${AI_EMBEDDING_DIMENSION:-768}
+      AI_GENERATION_INPUT_COST_PER_1K: ${AI_GENERATION_INPUT_COST_PER_1K:-0}
+      AI_GENERATION_OUTPUT_COST_PER_1K: ${AI_GENERATION_OUTPUT_COST_PER_1K:-0}
+      AI_EMBEDDING_COST_PER_1K: ${AI_EMBEDDING_COST_PER_1K:-0}
+      OLLAMA_GENERATION_URL: ${OLLAMA_GENERATION_URL:-http://host.docker.internal:11434/api/chat}
+      OLLAMA_EMBEDDING_URL: ${OLLAMA_EMBEDDING_URL:-http://host.docker.internal:11434/api/embeddings}
+      RICOZ_AI_MONTHLY_REQUEST_LIMIT: ${RICOZ_AI_MONTHLY_REQUEST_LIMIT:-2000}
+      RICOZ_AI_FAILOVER_PROVIDERS: ${RICOZ_AI_FAILOVER_PROVIDERS:-}
+      RICOZ_AI_INPUT_USD_PER_1K: ${RICOZ_AI_INPUT_USD_PER_1K:-0}
+      RICOZ_AI_OUTPUT_USD_PER_1K: ${RICOZ_AI_OUTPUT_USD_PER_1K:-0}
+      RICOZ_ENTERPRISE_SEARCH_HYBRID_ENABLED: ${RICOZ_ENTERPRISE_SEARCH_HYBRID_ENABLED:-false}
+      RICOZKNOW_ARTICLE_REQUIRE_INDEPENDENT_REVIEW: ${RICOZKNOW_ARTICLE_REQUIRE_INDEPENDENT_REVIEW:-true}
+      RICOZKNOW_ARTICLE_SCHEDULE_CHECK_MS: ${RICOZKNOW_ARTICLE_SCHEDULE_CHECK_MS:-30000}
+      RICOZKNOW_ARTICLE_GOVERNANCE_CRON: ${RICOZKNOW_ARTICLE_GOVERNANCE_CRON:-0 15 3 * * *}
+      RICOZKNOW_ARTICLE_EXPIRY_CRON: ${RICOZKNOW_ARTICLE_EXPIRY_CRON:-0 0 3 * * *}
+      RICOZ_COLLAB_INTERNAL_SECRET: ${RICOZ_COLLAB_INTERNAL_SECRET:-}
+      RICOZ_COLLAB_WS_URL: ${RICOZ_COLLAB_WS_URL:-}
+      RICOZ_AUTOMATION_WORKER_DELAY_MS: ${RICOZ_AUTOMATION_WORKER_DELAY_MS:-15000}
+      RICOZ_AUTOMATION_TRIGGER_DELAY_MS: ${RICOZ_AUTOMATION_TRIGGER_DELAY_MS:-60000}
+      RICOZ_SUPPORT_ESCALATION_HOURS: ${RICOZ_SUPPORT_ESCALATION_HOURS:-24}
+      RICOZ_SUPPORT_ESCALATION_SCAN_MS: ${RICOZ_SUPPORT_ESCALATION_SCAN_MS:-3600000}
+      RICOZ_STRIPE_SECRET_KEY: ${RICOZ_STRIPE_SECRET_KEY:-}
+      RICOZ_STRIPE_WEBHOOK_SECRET: ${RICOZ_STRIPE_WEBHOOK_SECRET:-}
+      RICOZ_BILLING_RETURN_URL: ${RICOZ_BILLING_RETURN_URL:-}
+      RICOZ_PLATFORM_OPERATOR_PRINCIPALS: ${RICOZ_PLATFORM_OPERATOR_PRINCIPALS:-}
+      RICOZ_MCP_ENABLED: ${RICOZ_MCP_ENABLED:-false}
+      RICOZ_MCP_WRITES_ENABLED: ${RICOZ_MCP_WRITES_ENABLED:-false}
+      RICOZ_MCP_RPM: ${RICOZ_MCP_RPM:-60}
+      RICOZ_MCP_ALLOWED_ORIGINS: ${RICOZ_MCP_ALLOWED_ORIGINS:-}
+      OTEL_METRICS_ENABLED: ${OTEL_METRICS_ENABLED:-false}
+      OTEL_METRICS_URL: ${OTEL_METRICS_URL:-http://otel-collector:4318/v1/metrics}
+      OTEL_METRICS_STEP: ${OTEL_METRICS_STEP:-30s}
+      OTEL_TRACING_ENDPOINT: ${OTEL_TRACING_ENDPOINT:-http://otel-collector:4318/v1/traces}
+      TRACING_SAMPLING_PROBABILITY: ${TRACING_SAMPLING_PROBABILITY:-0.1}
+      MANAGEMENT_TRACING_ENABLED: ${OTEL_TRACING_ENABLED:-false}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres: {condition: service_healthy}
+      redis: {condition: service_healthy}
+      opensearch: {condition: service_healthy}
+      minio: {condition: service_started}
+    networks: [default, observability]
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O - http://127.0.0.1:8081/actuator/health/liveness >/dev/null 2>&1 || exit 1"]
+      interval: 20s
+      timeout: 7s
+      start_period: 90s
+      retries: 6
+
+  # # Optional only when frontend source with Dockerfile is available.
+  # # EC2 host Nginx proxies public :443 to 127.0.0.1:3000.
+  # frontend:
+  #   profiles: [frontend]
+  #   build:
+  #     context: ${FRONTEND_PATH:-../frontend}
+  #     dockerfile: Dockerfile
+  #   container_name: rz-frontend
+  #   restart: unless-stopped
+  #   ports:
+  #     - "127.0.0.1:${FRONTEND_HOST_PORT:-3000}:80"
+  #   depends_on:
+  #     backend: {condition: service_healthy}
+  #   networks: [default]
+
+  # Optional: requires separate collab-service directory from full source bundle.
+  # collaboration:
+  #   profiles: [collaboration]
+  #   build:
+  #     context: ${COLLAB_PATH:-../collab-service}
+  #     dockerfile: Dockerfile
+  #   container_name: rz-collaboration
+  #   restart: unless-stopped
+  #   environment:
+  #     NODE_ENV: production
+  #     PORT: 1234
+  #     RICOZ_COLLAB_API_BASE: http://backend:8080
+  #     RICOZ_COLLAB_INTERNAL_SECRET: ${RICOZ_COLLAB_INTERNAL_SECRET:-}
+  #     RICOZ_COLLAB_REDIS_HOST: redis
+  #     RICOZ_COLLAB_REDIS_PORT: 6379
+  #   expose: ["1234"]
+  #   depends_on:
+  #     backend: {condition: service_healthy}
+  #     redis: {condition: service_healthy}
+  #   networks: [default]
+
+  prometheus:
+    profiles: [observability]
+    image: prom/prometheus:v3.5.0
+    container_name: ricozknow-prometheus
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/observability/prometheus/prometheus.yml
+      - --storage.tsdb.retention.time=15d
+      - --web.enable-lifecycle
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/observability/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "9090:9090"
+    extra_hosts: ["host.docker.internal:host-gateway"]
+    networks: [observability]
+
+  loki:
+    profiles: [observability]
+    image: grafana/loki:3.5.0
+    container_name: ricozknow-loki
+    restart: unless-stopped
+    command: -config.file=/etc/observability/loki/loki.yml
+    volumes:
+      - ./observability/loki/loki.yml:/etc/observability/loki/loki.yml:ro
+      - loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks: [observability]
+
+  tempo:
+    profiles: [observability]
+    image: grafana/tempo:2.8.2
+    container_name: ricozknow-tempo
+    restart: unless-stopped
+    command: -config.file=/etc/observability/tempo/tempo.yml
+    volumes:
+      - ./observability/tempo/tempo.yml:/etc/observability/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+    networks: [observability]
+
+  otel-collector:
+    profiles: [observability]
+    image: otel/opentelemetry-collector-contrib:0.135.0
+    container_name: ricozknow-otel-collector
+    restart: unless-stopped
+    command: ["--config=/etc/observability/otelcol-contrib/config.yml"]
+    environment:
+      OTEL_ENVIRONMENT: ${OTEL_ENVIRONMENT:-production}
+    volumes:
+      - ./observability/otel-collector/config.yml:/etc/observability/otelcol-contrib/config.yml:ro
+    ports:
+      - "4319:4317"
+      - "4320:4318"
+      - "8889:8889"
+    depends_on: [prometheus, tempo]
+    networks: [observability]
+
+  alloy:
+    profiles: [observability]
+    image: grafana/alloy:v1.11.0
+    container_name: ricozknow-alloy
+    restart: unless-stopped
+    command: run /etc/observability/alloy/config.alloy
+    volumes:
+      - ./observability/alloy/config.alloy:/etc/observability/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on: [loki]
+    networks: [observability]
+
+  grafana:
+    profiles: [observability]
+    image: grafana/grafana:12.1.1
+    container_name: ricozknow-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-}
+      GF_USERS_ALLOW_SIGN_UP: 'false'
+      GF_AUTH_ANONYMOUS_ENABLED: 'false'
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      - "${GRAFANA_HOST_PORT:-3001}:3000"
+    depends_on: [prometheus, loki, tempo]
+    networks: [observability]
+
+volumes:
+  postgres-data: {}
+  minio-data: {}
+  opensearch-data: {}
+  prometheus-data: {}
+  loki-data: {}
+  tempo-data: {}
+  grafana-data: {}
+networks:
+  default: {}
+  observability:
+    name: ricozknow-observability

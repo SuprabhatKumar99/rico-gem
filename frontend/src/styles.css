@@ -1,0 +1,222 @@
+@import "tailwindcss";
+
+@theme {
+  --color-brand-50: #eff6ff;
+  --color-brand-100: #dbeafe;
+  --color-brand-500: #3b82f6;
+  --color-brand-600: #2563eb;
+  --color-brand-700: #1d4ed8;
+}
+
+:root {
+  color-scheme: light;
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  margin: 0;
+  background: #f8fafc;
+  color: #0f172a;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.rk-card {
+  border: 1px solid #e2e8f0;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 1px 2px rgb(15 23 42 / 0.04);
+}
+
+.rk-btn {
+  display: inline-flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 10px;
+  padding: 0 14px;
+  font-size: 14px;
+  font-weight: 600;
+  transition: 150ms ease;
+}
+
+.rk-btn:focus-visible,
+.rk-input:focus-visible,
+.rk-select:focus-visible,
+.rk-textarea:focus-visible {
+  outline: 2px solid #2563eb;
+  outline-offset: 2px;
+}
+
+.rk-btn-primary {
+  background: #0f172a;
+  color: #fff;
+}
+
+.rk-btn-primary:hover:not(:disabled) {
+  background: #334155;
+}
+
+.rk-btn-secondary {
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #334155;
+}
+
+.rk-btn-secondary:hover:not(:disabled) {
+  background: #f8fafc;
+}
+
+.rk-btn-danger {
+  background: #e11d48;
+  color: #fff;
+}
+
+.rk-btn-danger:hover:not(:disabled) {
+  background: #be123c;
+}
+
+.rk-btn-caution {
+  background: #f59e0b;
+  color: #fff;
+}
+
+.rk-btn-caution:hover:not(:disabled) {
+  background: #d97706;
+}
+
+.rk-btn:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.rk-input,
+.rk-select,
+.rk-textarea {
+  width: 100%;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background: #fff;
+  padding: 10px 12px;
+  color: #0f172a;
+}
+
+.rk-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #334155;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.rk-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 4px 9px;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.rk-skeleton {
+  border-radius: 8px;
+  background: #e2e8f0;
+  animation: rk-pulse 1.5s ease-in-out infinite;
+}
+
+.rk-info-hint {
+  position: relative;
+  display: inline-flex;
+}
+
+.rk-info-hint-trigger {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 999px;
+  border: 1px solid #cbd5e1;
+  background: #fff;
+  color: #64748b;
+  font-size: 10px;
+  font-style: italic;
+  font-weight: 700;
+  line-height: 1;
+  cursor: help;
+}
+
+.rk-info-hint-trigger:hover {
+  border-color: #94a3b8;
+  color: #334155;
+}
+
+.rk-info-hint-bubble {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 50%;
+  z-index: 30;
+  width: 220px;
+  transform: translateX(-50%) translateY(4px);
+  border-radius: 10px;
+  background: #0f172a;
+  padding: 8px 10px;
+  font-size: 12px;
+  line-height: 1.4;
+  color: #fff;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease, transform 120ms ease;
+}
+
+.rk-info-hint-bubble-visible {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+  pointer-events: auto;
+}
+
+@keyframes rk-pulse {
+  50% { opacity: 0.55; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Phase 4 TipTap: selection, document media, tables and collaborative presence */
+.ricoz-rich-editor .tiptap p { margin: .65rem 0; }
+.ricoz-rich-editor .tiptap h1,.ricoz-rich-editor .tiptap h2,.ricoz-rich-editor .tiptap h3 { font-weight: 700; margin:1rem 0 .5rem; }
+.ricoz-rich-editor .tiptap h1 {font-size:1.7rem}
+.ricoz-rich-editor .tiptap h2 {font-size:1.35rem}
+.ricoz-rich-editor .tiptap ul {list-style:disc;padding-left:1.8rem}
+.ricoz-rich-editor .tiptap ol {list-style:decimal;padding-left:1.8rem}
+.ricoz-rich-editor .tiptap blockquote {border-left:4px solid #94a3b8;padding-left:1rem;color:#475569}
+.ricoz-rich-editor .tiptap pre {background:#0f172a;color:white;padding:1rem;overflow-x:auto;border-radius:.5rem}
+.ricoz-rich-editor .tiptap table {border-collapse:collapse;width:100%}
+.ricoz-rich-editor .tiptap td,.ricoz-rich-editor .tiptap th {border:1px solid #cbd5e1;padding:.45rem;text-align:left;min-width:3rem}
+.ricoz-rich-editor .tiptap img {max-width:100%;height:auto}
+.ricoz-rich-editor .tiptap mark {background:#fef08a}
+.ricoz-rich-editor .tiptap .is-empty::before {content:attr(data-placeholder);float:left;color:#94a3b8;pointer-events:none;height:0}
+.ricoz-rich-editor .collaboration-carets__caret {position:relative;border-left:2px solid var(--caret-color,#2563eb);pointer-events:none}
+.ricoz-rich-editor .collaboration-carets__label {position:absolute;top:-1.35rem;left:-1px;color:white;font-size:.68rem;padding:.1rem .3rem;border-radius:.2rem;background:var(--caret-color,#2563eb);white-space:nowrap}

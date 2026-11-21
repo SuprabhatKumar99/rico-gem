@@ -1,0 +1,4 @@
+service: ricozknow-api
+health_url: /api/v1/status
+readiness_url: /actuator/health/readiness
+liveness_url: /actuator/health/liveness

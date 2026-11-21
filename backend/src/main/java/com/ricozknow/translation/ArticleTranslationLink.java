@@ -1,0 +1,4 @@
+package com.ricozknow.translation;
+import jakarta.persistence.*; import lombok.*; import java.util.UUID;
+@Entity @Table(name="article_translation_links",uniqueConstraints={@UniqueConstraint(columnNames={"source_article_id","translated_article_id"}),@UniqueConstraint(columnNames={"source_article_id","language"})})
+@Getter @Setter @NoArgsConstructor public class ArticleTranslationLink{ @Id @GeneratedValue private UUID id; @Column(name="tenant_id",nullable=false) private UUID tenantId; @Column(name="source_article_id",nullable=false) private UUID sourceArticleId; @Column(name="translated_article_id",nullable=false) private UUID translatedArticleId; @Column(nullable=false) private String language; }

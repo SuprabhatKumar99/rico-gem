@@ -1,0 +1,1 @@
+package com.ricozknow.rag.evaluation; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface RagEvalCaseRepository extends JpaRepository<RagEvalCase,UUID>{ List<RagEvalCase> findByTenantIdAndEnabledTrue(UUID tenantId); Optional<RagEvalCase> findByTenantIdAndId(UUID tenantId,UUID id); }

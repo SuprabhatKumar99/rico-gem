@@ -1,0 +1,18 @@
+replicaCount: 2
+image:
+  repository: ricozknow/backend
+  tag: latest
+service:
+  port: 8080
+env:
+  DB_HOST: postgres
+  REDIS_HOST: redis
+  OPENSEARCH_HOST: opensearch
+ingress:
+  enabled: true
+  className: nginx
+  host: wiki.ricozknow.com
+  certManager:
+    enabled: false
+    clusterIssuer: letsencrypt-prod
+    secretName: ricozknow-tls

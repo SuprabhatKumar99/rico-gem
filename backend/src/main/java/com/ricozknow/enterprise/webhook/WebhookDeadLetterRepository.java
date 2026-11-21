@@ -1,0 +1,1 @@
+package com.ricozknow.enterprise.webhook; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface WebhookDeadLetterRepository extends JpaRepository<WebhookDeadLetter,UUID>{List<WebhookDeadLetter> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);}

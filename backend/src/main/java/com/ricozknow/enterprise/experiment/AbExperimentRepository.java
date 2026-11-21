@@ -1,0 +1,1 @@
+package com.ricozknow.enterprise.experiment; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface AbExperimentRepository extends JpaRepository<AbExperiment,UUID>{List<AbExperiment> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);Optional<AbExperiment> findByTenantIdAndKey(UUID tenantId,String key);}

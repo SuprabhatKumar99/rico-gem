@@ -1,0 +1,1 @@
+package com.ricozknow.rag.dto; import jakarta.validation.constraints.NotBlank; import java.util.List; import java.util.UUID; public record RagEvalCaseRequest(@NotBlank String question,List<UUID> expectedArticleIds,String expectedAnswer,Boolean enabled){}

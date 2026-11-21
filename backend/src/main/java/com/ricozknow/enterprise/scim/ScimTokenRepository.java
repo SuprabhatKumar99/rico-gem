@@ -1,0 +1,1 @@
+package com.ricozknow.enterprise.scim; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface ScimTokenRepository extends JpaRepository<ScimToken,UUID>{Optional<ScimToken> findByTokenHashAndActive(String hash,boolean active); List<ScimToken> findByTenantIdOrderByCreatedAtDesc(UUID tenantId);}

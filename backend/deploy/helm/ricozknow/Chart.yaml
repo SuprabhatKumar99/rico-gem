@@ -1,0 +1,5 @@
+apiVersion: v2
+name: ricozknow
+description: RicozKnow enterprise deployment
+version: 0.1.0
+appVersion: 0.1.0

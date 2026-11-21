@@ -1,0 +1,1 @@
+package com.ricozknow.search.dto; public record SearchSuggestionResponse(String query,String type){}

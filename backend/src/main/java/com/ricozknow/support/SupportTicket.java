@@ -1,0 +1,4 @@
+package com.ricozknow.support;
+import jakarta.persistence.*; import lombok.*; import java.time.Instant; import java.util.UUID;
+@Entity @Table(name="support_tickets") @Getter @Setter @NoArgsConstructor
+public class SupportTicket { @Id @GeneratedValue private UUID id; @Column(name="tenant_id",nullable=false) private UUID tenantId; @Column(name="customer_id") private UUID customerId; @Column(nullable=false) private String email; @Column(nullable=false) private String subject; @Column(nullable=false,columnDefinition="text") private String description; @Column(nullable=false) private String status="OPEN"; @Column(nullable=false) private String provider="EMAIL"; private String externalTicketId; @Column(name="conversation_id") private UUID conversationId; @Column(nullable=false) private Instant createdAt=Instant.now(); }

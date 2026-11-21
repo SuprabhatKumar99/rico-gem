@@ -1,0 +1,1 @@
+package com.ricozknow.support; import org.springframework.data.jpa.repository.JpaRepository; import java.util.*; public interface SupportTicketRepository extends JpaRepository<SupportTicket,UUID>{ List<SupportTicket> findTop50ByTenantIdOrderByCreatedAtDesc(UUID tenantId); }

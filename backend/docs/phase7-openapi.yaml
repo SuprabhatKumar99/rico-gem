@@ -1,0 +1,111 @@
+openapi: 3.0.3
+info:
+  title: RicozKnow Phase 7 Billing and Analytics
+  version: 7.0.0-source
+servers:
+  - url: /api/v1
+paths:
+  /billing/plans:
+    get:
+      summary: Available tenant plans
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Plan catalog}}
+  /billing/overview:
+    get:
+      summary: Current plan, subscription state, entitlements, usage
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Billing overview}}
+  /billing/invoices:
+    get:
+      summary: Reconciled tenant invoices
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Invoice history}}
+  /billing/checkout:
+    post:
+      summary: Create a Stripe subscription checkout session
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [planCode]
+              properties: {planCode: {type: string}}
+      responses: {'200': {description: Hosted checkout URL}, '503': {description: Stripe is not configured}}
+  /billing/portal:
+    post:
+      summary: Create Stripe Billing Portal session
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Hosted portal URL}}
+  /billing/cancel:
+    post:
+      summary: Request cancel-at-period-end or reversal at Stripe
+      security: [{bearerAuth: []}]
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [atPeriodEnd]
+              properties: {atPeriodEnd: {type: boolean}}
+      responses: {'202': {description: Provider request submitted; await webhook}}
+  /billing/webhooks/stripe:
+    post:
+      summary: Signed Stripe webhook, raw JSON, 5-minute HMAC tolerance
+      parameters:
+        - in: header
+          name: Stripe-Signature
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: {type: object}
+      responses: {'200': {description: Processed or idempotently ignored}, '400': {description: Invalid signature}}
+  /analytics/executive:
+    get:
+      summary: Tenant-scoped cross-module aggregates
+      security: [{bearerAuth: []}]
+      parameters:
+        - in: query
+          name: days
+          schema: {type: integer, enum: [7, 30, 90, 365], default: 30}
+      responses: {'200': {description: Analytics overview}}
+  /analytics/executive/daily:
+    get:
+      summary: Daily article engagement trend
+      security: [{bearerAuth: []}]
+      parameters:
+        - in: query
+          name: days
+          schema: {type: integer, enum: [7, 30, 90, 365], default: 30}
+      responses: {'200': {description: Daily trend}}
+  /platform/overview:
+    get:
+      summary: Platform-operator-only, cross-tenant billing view
+      security: [{bearerAuth: []}]
+      responses: {'200': {description: Tenant and invoice summary}, '403': {description: Not an allowlisted platform operator}}
+  /platform/plans/{code}/stripe-price:
+    put:
+      summary: Operator-only Stripe price mapping
+      security: [{bearerAuth: []}]
+      parameters:
+        - in: path
+          name: code
+          required: true
+          schema: {type: string}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [stripePriceId]
+              properties: {stripePriceId: {type: string}}
+      responses: {'200': {description: Mapping saved}, '403': {description: Operator credentials required}}
+components:
+  securitySchemes:
+    bearerAuth: {type: http, scheme: bearer, bearerFormat: JWT}

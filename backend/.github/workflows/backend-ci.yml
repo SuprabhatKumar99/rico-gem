@@ -1,0 +1,25 @@
+name: RicozKnow Backend CI
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+      - name: Run unit and integration tests
+        run: ./mvnw -B verify
+        env:
+          TESTCONTAINERS_RYUK_DISABLED: 'false'
+      - name: Build production image
+        run: docker build -t ricozknow-backend:ci .

@@ -1,0 +1,11 @@
+# RicozKnow SAML Service Provider runtime configuration.
+# Keep environment-specific values in environment variables; this file only
+# provides safe defaults and documents the browser-facing SAML endpoints.
+ricozknow:
+  saml:
+    enabled: ${SAML_ENABLED:true}
+    base-url: ${SAML_BASE_URL:http://localhost:8080}
+    metadata-path: ${SAML_METADATA_PATH:/saml2/metadata/{registrationId}}
+    acs-path: ${SAML_ACS_PATH:/login/saml2/sso/{registrationId}}
+    authentication-path: ${SAML_AUTHENTICATION_PATH:/saml2/authenticate/{registrationId}}
+    handoff-ttl-seconds: ${SAML_HANDOFF_TTL_SECONDS:60}
