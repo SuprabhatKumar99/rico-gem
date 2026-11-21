@@ -508,7 +508,7 @@ app.post("/api/v1/articles/bulk/import", requireAuth, async (req, res) => {
 
 // Mount AI Platform, AI Studio, Innovation, Enterprise Search, Connectors BEFORE /articles/:id wildcard
 registerAiAndSearchRoutes(app, { store, requireAuth, getReqAuth });
-registerOperationsAndEnterpriseRoutes(app, { store, requireAuth, getReqAuth, resolveRequestTenant });
+registerOperationsAndEnterpriseRoutes(app, { store, requireAuth, getReqAuth, getAuth, resolveRequestTenant });
 
 app.get("/api/v1/articles", requireAuth, (req, res) => {
   const { tenant } = getReqAuth(req);

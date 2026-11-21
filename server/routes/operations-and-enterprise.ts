@@ -2,18 +2,26 @@ import crypto from "node:crypto";
 import type { Express, Request, Response, NextFunction } from "express";
 import type { RicozKnowStore } from "../store.ts";
 import { paginate } from "../store.ts";
-import { buildTranslationDraft, rankKnowledgeRequests, scanSensitiveContent, slugifyTitle } from "../domain-helpers.ts";
+import {
+  buildTranslationDraft,
+  parseBrowserInfo,
+  rankKnowledgeRequests,
+  scanSensitiveContent,
+  slugifyTitle,
+  validateProductFeedbackInput
+} from "../domain-helpers.ts";
 import { readMultipartRequest } from "../multipart.ts";
 
 export interface OpsRouteContext {
   store: RicozKnowStore;
   requireAuth: (req: Request, res: Response, next: NextFunction) => void;
   getReqAuth: (req: Request) => NonNullable<ReturnType<RicozKnowStore["authenticateToken"]>>;
+  getAuth: (req: Request) => ReturnType<RicozKnowStore["authenticateToken"]>;
   resolveRequestTenant: (req: Request) => ReturnType<RicozKnowStore["resolveTenantBySlugOrSubdomain"]>;
 }
 
 export function registerOperationsAndEnterpriseRoutes(app: Express, ctx: OpsRouteContext): void {
-  const { store, requireAuth, getReqAuth, resolveRequestTenant } = ctx;
+  const { store, requireAuth, getReqAuth, getAuth, resolveRequestTenant } = ctx;
 
   // --- Executive & Standard Analytics ---
   app.get("/api/v1/analytics/articles/performance", requireAuth, (req, res) => {
@@ -944,6 +952,70 @@ export function registerOperationsAndEnterpriseRoutes(app: Express, ctx: OpsRout
       res.status(404).json({ message: "Playbook not found." });
       return;
     }
+    res.json(updated);
+  });
+
+  // =========================================================================
+  // PRODUCT FEEDBACK (BUG REPORTS & FEATURE REQUESTS TO DEV TEAM)
+  // =========================================================================
+  app.post("/api/v1/product-feedback", (req, res) => {
+    const auth = getAuth(req);
+    const tenant = auth ? auth.tenant : resolveRequestTenant(req);
+    const validated = validateProductFeedbackInput(req.body, req.header("user-agent") || "");
+    if (!validated.ok) {
+      res.status(400).json({ message: validated.error });
+      return;
+    }
+    const input = validated.value;
+    const browserInfo = input.includeDiagnostics && input.userAgent ? parseBrowserInfo(input.userAgent) : null;
+    const created = store.createProductFeedback(tenant.tenantId, {
+      type: input.type,
+      severity: input.severity,
+      title: input.title,
+      description: input.description,
+      reporterEmail: input.reporterEmail || auth?.user.email || null,
+      reporterUserId: auth?.user.id || null,
+      includeDiagnostics: input.includeDiagnostics,
+      pageUrl: input.pageUrl,
+      routePath: input.routePath,
+      browser: browserInfo?.browser ?? null,
+      os: browserInfo?.os ?? null,
+      userAgent: input.userAgent,
+      viewport: input.viewport,
+      theme: input.theme,
+      language: input.language
+    });
+    if (auth) {
+      store.recordAudit(auth.user.id, "PRODUCT_FEEDBACK", created.id, "SUBMIT", null, `${created.type}:${created.title}`);
+    }
+    res.status(201).json(created);
+  });
+
+  app.get("/api/v1/product-feedback", requireAuth, (req, res) => {
+    const { tenant } = getReqAuth(req);
+    const type = typeof req.query.type === "string" && req.query.type ? req.query.type.toUpperCase() : undefined;
+    const status = typeof req.query.status === "string" && req.query.status ? req.query.status.toUpperCase() : undefined;
+    res.json(store.listProductFeedback(tenant.tenantId, { type, status }));
+  });
+
+  app.patch("/api/v1/product-feedback/:id", requireAuth, (req, res) => {
+    const { tenant, user } = getReqAuth(req);
+    const rawStatus = String(req.body?.status || "").trim().toUpperCase();
+    const allowed = ["NEW", "TRIAGED", "IN_PROGRESS", "RESOLVED", "WONT_FIX"] as const;
+    if (!allowed.includes(rawStatus as (typeof allowed)[number])) {
+      res.status(400).json({ message: "Invalid feedback status." });
+      return;
+    }
+    const updated = store.updateProductFeedbackStatus(
+      tenant.tenantId,
+      req.params.id,
+      rawStatus as (typeof allowed)[number]
+    );
+    if (!updated) {
+      res.status(404).json({ message: "Feedback report not found." });
+      return;
+    }
+    store.recordAudit(user.id, "PRODUCT_FEEDBACK", updated.id, "UPDATE_STATUS", null, updated.status);
     res.json(updated);
   });
 }

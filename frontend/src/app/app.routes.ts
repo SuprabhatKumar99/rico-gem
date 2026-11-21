@@ -179,6 +179,11 @@ export const routes: Routes = [
         loadComponent: () => import("./pages/operations.component").then((m) => m.OperationsComponent)
       },
       {
+        path: "product-feedback",
+        canActivate: [roleGuard(["ADMIN", "EDITOR", "REVIEWER"])],
+        loadComponent: () => import("./pages/product-feedback.component").then((m) => m.ProductFeedbackComponent)
+      },
+      {
         path: "security",
         loadComponent: () => import("./pages/security.component").then((m) => m.SecurityComponent)
       },

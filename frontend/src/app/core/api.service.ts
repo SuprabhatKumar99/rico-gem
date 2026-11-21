@@ -30,7 +30,8 @@ import {
   CreatedRagApiKey,
   RagSearchResponse,
   SessionView, MfaEnrollment, MfaStatus, TenantSettings, UsageMeter, AiCostEvent, AuditLog, WebhookDeadLetter,
-  IndexStatus, KnowledgeSource, ArticleMetadata, BlockComment, ArticleTemplate, VersionDiff, AppNotification, SavedSearch
+  IndexStatus, KnowledgeSource, ArticleMetadata, BlockComment, ArticleTemplate, VersionDiff, AppNotification, SavedSearch,
+  ProductFeedback, CreateProductFeedbackRequest, ProductFeedbackStatus
 } from "../models";
 
 function normalizeSlug(value: string): string {
@@ -1066,6 +1067,27 @@ export class ApiService {
       `${this.baseUrl}/api/v1/playbooks/${encodeURIComponent(id)}/run`,
       { outcome },
       { params: this.params({ tenant: tenant || this.portalTenant() }) }
+    );
+  }
+
+  submitProductFeedback(payload: CreateProductFeedbackRequest, tenant?: string | null): Observable<ProductFeedback> {
+    return this.http.post<ProductFeedback>(
+      `${this.baseUrl}/api/v1/product-feedback`,
+      payload,
+      { params: this.params({ tenant: tenant || this.portalTenant() }) }
+    );
+  }
+
+  productFeedback(filters?: { type?: string; status?: string }): Observable<ProductFeedback[]> {
+    return this.http.get<ProductFeedback[]>(`${this.baseUrl}/api/v1/product-feedback`, {
+      params: this.params({ type: filters?.type, status: filters?.status })
+    });
+  }
+
+  updateProductFeedbackStatus(id: string, status: ProductFeedbackStatus): Observable<ProductFeedback> {
+    return this.http.patch<ProductFeedback>(
+      `${this.baseUrl}/api/v1/product-feedback/${encodeURIComponent(id)}`,
+      { status }
     );
   }
 }

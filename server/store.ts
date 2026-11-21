@@ -192,6 +192,29 @@ export interface ReviewHistoryRecord {
   createdAt: string;
 }
 
+export interface ProductFeedbackRecord {
+  id: string;
+  tenantId: string;
+  type: "BUG" | "FEATURE";
+  severity: "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+  status: "NEW" | "TRIAGED" | "IN_PROGRESS" | "RESOLVED" | "WONT_FIX";
+  title: string;
+  description: string;
+  reporterEmail: string | null;
+  reporterUserId: string | null;
+  includeDiagnostics: boolean;
+  pageUrl: string | null;
+  routePath: string | null;
+  browser: string | null;
+  os: string | null;
+  userAgent: string | null;
+  viewport: string | null;
+  theme: "light" | "dark" | null;
+  language: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface LoginResponseDto {
   accessToken: string;
   userId: string;
@@ -357,6 +380,7 @@ export class RicozKnowStore {
       };
     }>;
   }>();
+  readonly productFeedback = new Map<string, ProductFeedbackRecord>();
   enterpriseSearchCount = 42;
   enterpriseSearchUnanswered = 3;
   aiRequestCount = 1420;
@@ -1301,6 +1325,78 @@ export class RicozKnowStore {
     for (const pb of seedPlaybooks) {
       this.playbooks.set(pb.id, pb);
     }
+
+    const seedFeedback: ProductFeedbackRecord[] = [
+      {
+        id: "fb-seed-001",
+        tenantId: demoTenant.tenantId,
+        type: "BUG",
+        severity: "HIGH",
+        status: "TRIAGED",
+        title: "Code block horizontal scroll clips copy button on narrow viewports",
+        description: "When viewing long curl examples in the RAG API guide on a 390px phone screen, scrolling the code block slightly hides the top-right copy trigger.",
+        reporterEmail: "editor@demo.ricozknow.local",
+        reporterUserId: "user-editor-1",
+        includeDiagnostics: true,
+        pageUrl: "http://localhost:3000/portal/article/rag-api-integration?tenant=demo",
+        routePath: "/portal/article/rag-api-integration?tenant=demo",
+        browser: "Chrome 131",
+        os: "iOS",
+        userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/131.0.6778.73 Mobile/15E148 Safari/604.1",
+        viewport: "390x844",
+        theme: "dark",
+        language: "en-US",
+        createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 1 * 3600 * 1000).toISOString()
+      },
+      {
+        id: "fb-seed-002",
+        tenantId: demoTenant.tenantId,
+        type: "FEATURE",
+        severity: "MEDIUM",
+        status: "IN_PROGRESS",
+        title: "Export review history and governance sign-offs as signed PDF",
+        description: "Our SOC 2 auditors ask for quarterly verification sign-off bundles. Adding a one-click PDF export on the Governance Health view would save hours.",
+        reporterEmail: "reviewer@demo.ricozknow.local",
+        reporterUserId: "user-reviewer-1",
+        includeDiagnostics: true,
+        pageUrl: "http://localhost:3000/knowledge-health",
+        routePath: "/knowledge-health",
+        browser: "Firefox 133",
+        os: "macOS",
+        userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.15; rv:133.0) Gecko/20100101 Firefox/133.0",
+        viewport: "1440x900",
+        theme: "light",
+        language: "en-US",
+        createdAt: new Date(Date.now() - 18 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString()
+      },
+      {
+        id: "fb-seed-003",
+        tenantId: demoTenant.tenantId,
+        type: "FEATURE",
+        severity: "LOW",
+        status: "RESOLVED",
+        title: "Keyboard shortcut for quick jump across workspace pages",
+        description: "Would love Cmd+K / Ctrl+K navigation to jump directly to articles, playbooks, and admin settings without clicking through the sidebar.",
+        reporterEmail: "admin@demo.ricozknow.local",
+        reporterUserId: "user-admin-1",
+        includeDiagnostics: true,
+        pageUrl: "http://localhost:3000/dashboard",
+        routePath: "/dashboard",
+        browser: "Chrome 131",
+        os: "Windows",
+        userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36",
+        viewport: "1920x1080",
+        theme: "dark",
+        language: "en-US",
+        createdAt: new Date(Date.now() - 72 * 3600 * 1000).toISOString(),
+        updatedAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString()
+      }
+    ];
+    for (const fb of seedFeedback) {
+      this.productFeedback.set(fb.id, fb);
+    }
   }
 
   recordAudit(actorUserId: string, entityType: string, entityId: string, action: string, oldState: string | null = null, newState: string | null = null): void {
@@ -2230,6 +2326,46 @@ export class RicozKnowStore {
     if (!rec || rec.tenantId !== tenantId) return null;
     rec.runsCount += 1;
     if (outcome === "RESOLVED") rec.resolvedCount += 1;
+    rec.updatedAt = new Date().toISOString();
+    return rec;
+  }
+
+  listProductFeedback(tenantId: string, filter: { type?: string; status?: string } = {}): ProductFeedbackRecord[] {
+    return Array.from(this.productFeedback.values())
+      .filter((item) => {
+        if (item.tenantId !== tenantId) return false;
+        if (filter.type && item.type !== filter.type) return false;
+        if (filter.status && item.status !== filter.status) return false;
+        return true;
+      })
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  createProductFeedback(
+    tenantId: string,
+    input: Omit<ProductFeedbackRecord, "id" | "tenantId" | "status" | "createdAt" | "updatedAt">
+  ): ProductFeedbackRecord {
+    const now = new Date().toISOString();
+    const rec: ProductFeedbackRecord = {
+      id: uid("fb"),
+      tenantId,
+      status: "NEW",
+      ...input,
+      createdAt: now,
+      updatedAt: now
+    };
+    this.productFeedback.set(rec.id, rec);
+    return rec;
+  }
+
+  updateProductFeedbackStatus(
+    tenantId: string,
+    id: string,
+    status: ProductFeedbackRecord["status"]
+  ): ProductFeedbackRecord | null {
+    const rec = this.productFeedback.get(id);
+    if (!rec || rec.tenantId !== tenantId) return null;
+    rec.status = status;
     rec.updatedAt = new Date().toISOString();
     return rec;
   }

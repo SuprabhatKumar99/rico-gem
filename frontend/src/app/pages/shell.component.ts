@@ -387,6 +387,7 @@ export class ShellComponent implements OnInit {
     { label: "RAG Workbench", path: "/rag-workbench", roles: ["ADMIN"] },
     { label: "Developer portal", path: "/developer-portal", roles: ["ADMIN"] },
     { label: "Operations", path: "/operations", roles: ["ADMIN"] },
+    { label: "Product feedback", path: "/product-feedback", roles: ["ADMIN", "EDITOR", "REVIEWER"] },
     { label: "Security", path: "/security" },
     { label: "Agent access", path: "/agent", roles: ["ADMIN", "AGENT_VIEWER"] }
   ];

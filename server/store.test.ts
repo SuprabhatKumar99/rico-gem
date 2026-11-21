@@ -7,13 +7,15 @@ import {
   diffArticleBlocks,
   evaluateArticleQuality,
   normalizeThemePreference,
+  parseBrowserInfo,
   rankKnowledgeRequests,
   resolveThemeMode,
   scanSensitiveContent,
   slugifyTitle,
   tiptapToBlocks,
   toggleThemeMode,
-  transformWriting
+  transformWriting,
+  validateProductFeedbackInput
 } from "./domain-helpers.ts";
 import { parseMultipartBuffer } from "./multipart.ts";
 
@@ -298,6 +300,105 @@ test("theme preference normalization, resolution, and toggling handle light, dar
   assert.equal(toggleThemeMode("light"), "dark");
   assert.equal(toggleThemeMode("dark"), "light");
 });
+
+test("parseBrowserInfo extracts readable browser and OS labels across user agents", () => {
+  assert.deepEqual(
+    parseBrowserInfo("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"),
+    { browser: "Chrome 131.0", os: "macOS" }
+  );
+  assert.deepEqual(
+    parseBrowserInfo("Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0"),
+    { browser: "Firefox 133.0", os: "Windows" }
+  );
+  assert.deepEqual(
+    parseBrowserInfo("Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36 Edg/131.0.0.0"),
+    { browser: "Edge 131.0", os: "Windows" }
+  );
+  assert.deepEqual(
+    parseBrowserInfo("Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1"),
+    { browser: "Safari 18.1", os: "iOS" }
+  );
+  assert.deepEqual(parseBrowserInfo(""), { browser: "Unknown browser", os: "Unknown OS" });
+});
+
+test("validateProductFeedbackInput and store product feedback CRUD work cleanly", () => {
+  const rejectedShort = validateProductFeedbackInput({ type: "BUG", title: "Hi", description: "Too short" });
+  assert.equal(rejectedShort.ok, false);
+
+  const rejectedEmail = validateProductFeedbackInput({
+    type: "FEATURE",
+    title: "Valid feature title",
+    description: "Detailed feature request description.",
+    reporterEmail: "not-an-email"
+  });
+  assert.equal(rejectedEmail.ok, false);
+
+  const valid = validateProductFeedbackInput({
+    type: "BUG",
+    severity: "HIGH",
+    title: "Filter dropdown resets on pagination",
+    description: "Switching from page 1 to page 2 clears the selected status filter.",
+    reporterEmail: "QA@Demo.io",
+    includeDiagnostics: true,
+    pageUrl: "http://localhost:3000/articles?status=DRAFT",
+    routePath: "/articles?status=DRAFT",
+    userAgent: "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/131.0.0.0 Safari/537.36",
+    viewport: "1440x900",
+    theme: "dark",
+    language: "en-US"
+  });
+  assert.equal(valid.ok, true);
+  if (!valid.ok) return;
+  assert.equal(valid.value.reporterEmail, "qa@demo.io");
+  assert.equal(valid.value.pageUrl, "http://localhost:3000/articles?status=DRAFT");
+
+  const unsafeUrl = validateProductFeedbackInput({
+    type: "BUG",
+    title: "Unsafe URL test",
+    description: "Verify javascript scheme is stripped.",
+    pageUrl: "javascript:alert(1)"
+  });
+  assert.equal(unsafeUrl.ok, true);
+  if (unsafeUrl.ok) {
+    assert.equal(unsafeUrl.value.pageUrl, null);
+  }
+
+  const optedOut = validateProductFeedbackInput({
+    type: "FEATURE",
+    title: "No diagnostics attached",
+    description: "User unchecked diagnostics sharing.",
+    includeDiagnostics: false,
+    pageUrl: "http://localhost:3000/dashboard",
+    userAgent: "Mozilla/5.0 Chrome/131.0"
+  });
+  assert.equal(optedOut.ok, true);
+  if (optedOut.ok) {
+    assert.equal(optedOut.value.pageUrl, null);
+    assert.equal(optedOut.value.userAgent, null);
+  }
+
+  const store = createStore();
+  const tid = store.defaultTenantId;
+  const initialCount = store.listProductFeedback(tid).length;
+  assert.ok(initialCount >= 3);
+
+  const info = parseBrowserInfo(valid.value.userAgent);
+  const created = store.createProductFeedback(tid, {
+    ...valid.value,
+    reporterUserId: "user-admin-1",
+    browser: info.browser,
+    os: info.os
+  });
+  assert.equal(created.status, "NEW");
+  assert.equal(created.browser, "Chrome 131.0");
+  assert.equal(created.os, "Linux");
+  assert.equal(store.listProductFeedback(tid).length, initialCount + 1);
+  assert.equal(store.listProductFeedback(tid)[0].id, created.id);
+
+  const triaged = store.updateProductFeedbackStatus(tid, created.id, "TRIAGED");
+  assert.equal(triaged?.status, "TRIAGED");
+});
+
 
 
 

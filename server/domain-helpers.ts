@@ -329,4 +329,179 @@ export function toggleThemeMode(currentResolved: ResolvedTheme): ResolvedTheme {
   return currentResolved === "dark" ? "light" : "dark";
 }
 
+export type ProductFeedbackType = "BUG" | "FEATURE";
+export type ProductFeedbackSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type ProductFeedbackStatus = "NEW" | "TRIAGED" | "IN_PROGRESS" | "RESOLVED" | "WONT_FIX";
+
+export interface BrowserSummary {
+  browser: string;
+  os: string;
+}
+
+export function parseBrowserInfo(userAgent: string | null | undefined): BrowserSummary {
+  const ua = String(userAgent || "").trim();
+  if (!ua) {
+    return { browser: "Unknown browser", os: "Unknown OS" };
+  }
+
+  let browser = "Unknown browser";
+  const edgeMatch = ua.match(/Edg(?:A|iOS)?\/(\d+(?:\.\d+)?)/);
+  const operaMatch = ua.match(/OPR\/(\d+(?:\.\d+)?)/);
+  const firefoxMatch = ua.match(/Firefox\/(\d+(?:\.\d+)?)/);
+  const chromeMatch = ua.match(/(?:Chrome|CriOS)\/(\d+(?:\.\d+)?)/);
+  const safariMatch = ua.match(/Version\/(\d+(?:\.\d+)?).*Safari\//);
+
+  if (edgeMatch) {
+    browser = `Edge ${edgeMatch[1]}`;
+  } else if (operaMatch) {
+    browser = `Opera ${operaMatch[1]}`;
+  } else if (firefoxMatch) {
+    browser = `Firefox ${firefoxMatch[1]}`;
+  } else if (chromeMatch) {
+    browser = `Chrome ${chromeMatch[1]}`;
+  } else if (safariMatch) {
+    browser = `Safari ${safariMatch[1]}`;
+  } else if (/HeadlessChrome\/(\d+(?:\.\d+)?)/.test(ua)) {
+    const m = ua.match(/HeadlessChrome\/(\d+(?:\.\d+)?)/);
+    browser = `Chrome ${m?.[1] ?? ""}`.trim();
+  }
+
+  let os = "Unknown OS";
+  if (/iPhone|iPad|iPod/i.test(ua)) {
+    os = "iOS";
+  } else if (/Android/i.test(ua)) {
+    os = "Android";
+  } else if (/Windows NT/i.test(ua)) {
+    os = "Windows";
+  } else if (/Mac OS X|Macintosh/i.test(ua)) {
+    os = "macOS";
+  } else if (/CrOS/i.test(ua)) {
+    os = "ChromeOS";
+  } else if (/Linux/i.test(ua)) {
+    os = "Linux";
+  }
+
+  return { browser, os };
+}
+
+export interface ValidatedProductFeedbackInput {
+  type: ProductFeedbackType;
+  severity: ProductFeedbackSeverity;
+  title: string;
+  description: string;
+  reporterEmail: string | null;
+  includeDiagnostics: boolean;
+  pageUrl: string | null;
+  routePath: string | null;
+  userAgent: string | null;
+  viewport: string | null;
+  theme: ResolvedTheme | null;
+  language: string | null;
+}
+
+function sanitizePageUrl(raw: unknown): string | null {
+  const value = String(raw || "").trim();
+  if (!value) return null;
+  if (/^https?:\/\//i.test(value) || value.startsWith("/")) {
+    return value.slice(0, 500);
+  }
+  return null;
+}
+
+export function validateProductFeedbackInput(
+  body: unknown,
+  fallbackUserAgent = ""
+): { ok: true; value: ValidatedProductFeedbackInput } | { ok: false; error: string } {
+  if (!body || typeof body !== "object") {
+    return { ok: false, error: "Request body is required." };
+  }
+  const b = body as Record<string, unknown>;
+  const rawType = String(b.type || "BUG").trim().toUpperCase();
+  const type: ProductFeedbackType = rawType === "FEATURE" ? "FEATURE" : rawType === "BUG" ? "BUG" : "BUG";
+
+  const rawSeverity = String(b.severity || "MEDIUM").trim().toUpperCase();
+  const severity: ProductFeedbackSeverity = (["LOW", "MEDIUM", "HIGH", "CRITICAL"] as const).includes(
+    rawSeverity as ProductFeedbackSeverity
+  )
+    ? (rawSeverity as ProductFeedbackSeverity)
+    : "MEDIUM";
+
+  const title = String(b.title || "").trim();
+  if (title.length < 3) {
+    return { ok: false, error: "Please enter a short summary (at least 3 characters)." };
+  }
+  if (title.length > 160) {
+    return { ok: false, error: "Summary must be 160 characters or fewer." };
+  }
+
+  const description = String(b.description || "").trim();
+  if (description.length < 5) {
+    return { ok: false, error: "Please provide a brief description (at least 5 characters)." };
+  }
+  if (description.length > 4000) {
+    return { ok: false, error: "Description must be 4,000 characters or fewer." };
+  }
+
+  const rawEmail = String(b.reporterEmail || "").trim();
+  let reporterEmail: string | null = null;
+  if (rawEmail) {
+    if (rawEmail.length > 160 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(rawEmail)) {
+      return { ok: false, error: "Please provide a valid email address or leave it blank." };
+    }
+    reporterEmail = rawEmail.toLowerCase();
+  }
+
+  const includeDiagnostics = b.includeDiagnostics !== false;
+  if (!includeDiagnostics) {
+    return {
+      ok: true,
+      value: {
+        type,
+        severity,
+        title,
+        description,
+        reporterEmail,
+        includeDiagnostics: false,
+        pageUrl: null,
+        routePath: null,
+        userAgent: null,
+        viewport: null,
+        theme: null,
+        language: null
+      }
+    };
+  }
+
+  const pageUrl = sanitizePageUrl(b.pageUrl);
+  const rawRoute = String(b.routePath || "").trim();
+  const routePath = rawRoute ? rawRoute.slice(0, 240) : null;
+  const rawUa = String(b.userAgent || fallbackUserAgent || "").trim();
+  const userAgent = rawUa ? rawUa.slice(0, 400) : null;
+  const rawViewport = String(b.viewport || "").trim();
+  const viewport = rawViewport ? rawViewport.slice(0, 32) : null;
+  const rawTheme = String(b.theme || "").trim().toLowerCase();
+  const theme: ResolvedTheme | null = rawTheme === "dark" ? "dark" : rawTheme === "light" ? "light" : null;
+  const rawLang = String(b.language || "").trim();
+  const language = rawLang ? rawLang.slice(0, 32) : null;
+
+  return {
+    ok: true,
+    value: {
+      type,
+      severity,
+      title,
+      description,
+      reporterEmail,
+      includeDiagnostics: true,
+      pageUrl,
+      routePath,
+      userAgent,
+      viewport,
+      theme,
+      language
+    }
+  };
+}
+
+
 

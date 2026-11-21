@@ -496,3 +496,46 @@ export interface BookmarkedArticle {
   savedAt: string;
 }
 
+export type ProductFeedbackType = "BUG" | "FEATURE";
+export type ProductFeedbackSeverity = "LOW" | "MEDIUM" | "HIGH" | "CRITICAL";
+export type ProductFeedbackStatus = "NEW" | "TRIAGED" | "IN_PROGRESS" | "RESOLVED" | "WONT_FIX";
+
+export interface ProductFeedback {
+  id: string;
+  tenantId: string;
+  type: ProductFeedbackType;
+  severity: ProductFeedbackSeverity;
+  status: ProductFeedbackStatus;
+  title: string;
+  description: string;
+  reporterEmail: string | null;
+  reporterUserId: string | null;
+  includeDiagnostics: boolean;
+  pageUrl: string | null;
+  routePath: string | null;
+  browser: string | null;
+  os: string | null;
+  userAgent: string | null;
+  viewport: string | null;
+  theme: "light" | "dark" | null;
+  language: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateProductFeedbackRequest {
+  type: ProductFeedbackType;
+  severity: ProductFeedbackSeverity;
+  title: string;
+  description: string;
+  reporterEmail?: string | null;
+  includeDiagnostics: boolean;
+  pageUrl?: string | null;
+  routePath?: string | null;
+  userAgent?: string | null;
+  viewport?: string | null;
+  theme?: "light" | "dark" | null;
+  language?: string | null;
+}
+
+
