@@ -4,11 +4,12 @@ import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
 import { AuthService } from "../core/auth.service";
 import { ApiService } from "../core/api.service";
+import { ThemeToggleComponent } from "../shared/theme-toggle.component";
 
 @Component({
   selector: "rk-login",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ThemeToggleComponent],
   template: `
     <div class="grid min-h-screen lg:grid-cols-[1.05fr_0.95fr]">
       <section class="hidden bg-slate-950 p-12 text-white lg:flex lg:flex-col lg:justify-between">
@@ -30,14 +31,17 @@ import { ApiService } from "../core/api.service";
         <p class="text-sm text-slate-500">Search first. Content second. Administration third.</p>
       </section>
 
-      <section class="flex items-center justify-center bg-white p-6 sm:p-10">
+      <section class="relative flex items-center justify-center bg-white p-6 sm:p-10">
         <div class="w-full max-w-md">
-          <div class="lg:hidden">
-            <div class="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 font-black text-white">R</div>
-            <p class="mt-4 text-xl font-bold">RicozKnow</p>
+          <div class="flex items-center justify-between gap-3">
+            <a routerLink="/" class="flex items-center gap-3 lg:invisible">
+              <div class="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 font-black text-white">R</div>
+              <span class="text-xl font-bold">RicozKnow</span>
+            </a>
+            <rk-theme-toggle [compact]="true" />
           </div>
 
-          <div class="mt-10 lg:mt-0">
+          <div class="mt-8 lg:mt-6">
             <p class="text-sm font-semibold text-slate-500">Welcome back</p>
             <h2 class="mt-2 text-3xl font-bold tracking-tight">Sign in to your workspace</h2>
             <p class="mt-2 text-sm leading-6 text-slate-500">

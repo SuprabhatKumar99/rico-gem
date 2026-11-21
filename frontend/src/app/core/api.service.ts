@@ -1021,4 +1021,52 @@ export class ApiService {
   executiveDaily(days:number): Observable<any[]> { return this.http.get<any[]>(`${this.baseUrl}/api/v1/analytics/executive/daily`,{params:this.params({days})}); }
   platformConfigurePrice(code:string,stripePriceId:string): Observable<any> { return this.http.put<any>(`${this.baseUrl}/api/v1/platform/plans/${encodeURIComponent(code)}/stripe-price`,{stripePriceId}); }
   platformOverview(): Observable<any> { return this.http.get<any>(`${this.baseUrl}/api/v1/platform/overview`); }
+
+  knowledgeRequests(filters?: { status?: string; priority?: string }): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/api/v1/knowledge-requests`, {
+      params: this.params({ status: filters?.status, priority: filters?.priority })
+    });
+  }
+  createKnowledgeRequest(payload: {
+    title: string;
+    description: string;
+    categoryId?: string | null;
+    priority?: string;
+    source?: string;
+    requesterEmail?: string;
+  }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/api/v1/knowledge-requests`, payload);
+  }
+  upvoteKnowledgeRequest(id: string): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/api/v1/knowledge-requests/${encodeURIComponent(id)}/upvote`, {});
+  }
+  updateKnowledgeRequest(id: string, patch: { status?: string; priority?: string; assigneeEmail?: string | null }): Observable<any> {
+    return this.http.patch<any>(`${this.baseUrl}/api/v1/knowledge-requests/${encodeURIComponent(id)}`, patch);
+  }
+  convertKnowledgeRequestToDraft(id: string): Observable<{ request: any; article: any }> {
+    return this.http.post<{ request: any; article: any }>(`${this.baseUrl}/api/v1/knowledge-requests/${encodeURIComponent(id)}/convert-to-draft`, {});
+  }
+
+  playbooks(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/api/v1/playbooks`);
+  }
+  portalPlaybooks(tenant?: string | null): Observable<any[]> {
+    return this.http.get<any[]>(`${this.baseUrl}/api/v1/portal/playbooks`, {
+      params: this.params({ tenant: tenant || this.portalTenant() })
+    });
+  }
+  createPlaybook(payload: { title: string; summary: string; category: string; published?: boolean; steps: any[] }): Observable<any> {
+    return this.http.post<any>(`${this.baseUrl}/api/v1/playbooks`, payload);
+  }
+  deletePlaybook(id: string): Observable<void> {
+    return this.http.delete<void>(`${this.baseUrl}/api/v1/playbooks/${encodeURIComponent(id)}`);
+  }
+  recordPlaybookRun(id: string, outcome: "RESOLVED" | "ESCALATED", tenant?: string | null): Observable<any> {
+    return this.http.post<any>(
+      `${this.baseUrl}/api/v1/playbooks/${encodeURIComponent(id)}/run`,
+      { outcome },
+      { params: this.params({ tenant: tenant || this.portalTenant() }) }
+    );
+  }
 }
+

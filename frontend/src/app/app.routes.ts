@@ -107,6 +107,16 @@ export const routes: Routes = [
         loadComponent: () => import("./pages/categories.component").then((m) => m.CategoriesComponent)
       },
       {
+        path: "requests",
+        canActivate: [roleGuard(["ADMIN", "EDITOR", "REVIEWER"])],
+        loadComponent: () => import("./pages/knowledge-requests.component").then((m) => m.KnowledgeRequestsComponent)
+      },
+      {
+        path: "playbooks",
+        canActivate: [roleGuard(["ADMIN", "EDITOR", "REVIEWER", "AGENT_VIEWER"])],
+        loadComponent: () => import("./pages/playbooks.component").then((m) => m.PlaybooksComponent)
+      },
+      {
         path: "knowledge-sources",
         canActivate: [roleGuard(["ADMIN", "EDITOR", "REVIEWER"])],
         loadComponent: () => import("./pages/knowledge-sources.component").then((m) => m.KnowledgeSourcesComponent)

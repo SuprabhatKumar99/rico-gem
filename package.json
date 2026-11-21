@@ -1,0 +1,24 @@
+{
+  "name": "ricozknow",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend"
+  ],
+  "scripts": {
+    "build:frontend": "npm --workspace=frontend run build",
+    "build": "npm run build:frontend",
+    "dev": "node server.ts",
+    "start": "node server.ts",
+    "lint": "./frontend/node_modules/.bin/tsc --noEmit -p tsconfig.server.json && ./frontend/node_modules/.bin/tsc --noEmit -p frontend/tsconfig.app.json",
+    "test": "npx --yes tsx --test server/store.test.ts"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "^4.17.21",
+    "@types/node": "^22.10.0"
+  }
+}

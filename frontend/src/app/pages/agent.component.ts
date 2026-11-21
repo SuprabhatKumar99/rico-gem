@@ -222,7 +222,7 @@ export class AgentComponent {
   exampleCopied = false;
 
   private readonly baseUrl =
-    localStorage.getItem("rk_api_url")?.replace(/\/$/, "") || "http://localhost:8080";
+    localStorage.getItem("rk_api_url")?.replace(/\/$/, "") || window.location.origin;
 
   constructor(private readonly api: ApiService) {}
 

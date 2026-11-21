@@ -3,6 +3,7 @@ import { Component, OnInit, inject } from "@angular/core";
 import { ActivatedRoute, RouterLink } from "@angular/router";
 import { HttpClient, HttpParams } from "@angular/common/http";
 import { resolvePublicTenant } from "../core/public-tenant";
+import { ThemeToggleComponent } from "../shared/theme-toggle.component";
 
 interface PageResponse<T> { content: T[]; totalElements: number; totalPages: number; number: number; size: number; first: boolean; last: boolean; }
 interface ArticleSummary { id: string; slug: string; title: string; categoryId: string | null; }
@@ -12,18 +13,19 @@ interface SearchResponse { query: string; results: SearchHit[]; total: number; }
 @Component({
   selector: "rk-explore",
   standalone: true,
-  imports: [CommonModule, RouterLink],
+  imports: [CommonModule, RouterLink, ThemeToggleComponent],
   template: `
     <div class="min-h-screen bg-slate-50 text-slate-950">
       <header class="border-b border-slate-200 bg-white">
-        <div class="mx-auto flex max-w-7xl items-center justify-between px-4 py-5 sm:px-6 lg:px-8">
-          <a [routerLink]="['/']" class="flex items-center gap-3">
-            <span class="grid h-9 w-9 place-items-center rounded-xl bg-slate-950 font-black text-white">R</span>
-            <div><p class="font-bold">RicozKnow</p><p class="text-[10px] uppercase tracking-widest text-slate-400">Knowledge portal</p></div>
+        <div class="mx-auto flex max-w-7xl items-center justify-between gap-2 px-4 py-4 sm:px-6 sm:py-5 lg:px-8">
+          <a [routerLink]="['/']" class="flex min-w-0 items-center gap-2.5 sm:gap-3">
+            <span class="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-slate-950 font-black text-white">R</span>
+            <div class="min-w-0"><p class="truncate font-bold">RicozKnow</p><p class="hidden text-[10px] uppercase tracking-widest text-slate-400 sm:block">Knowledge portal</p></div>
           </a>
-          <div class="flex items-center gap-2">
-            <a routerLink="/login" class="rk-btn rk-btn-secondary">Sign in</a>
-            <a routerLink="/register" class="rk-btn rk-btn-primary">Get started</a>
+          <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
+            <rk-theme-toggle [compact]="true" />
+            <a routerLink="/login" class="rk-btn rk-btn-secondary px-3 text-xs sm:px-3.5 sm:text-sm">Sign in</a>
+            <a routerLink="/register" class="rk-btn rk-btn-primary hidden sm:inline-flex">Get started</a>
           </div>
         </div>
       </header>
@@ -42,7 +44,7 @@ interface SearchResponse { query: string; results: SearchHit[]; total: number; }
             <h1 class="mt-3 text-4xl font-bold tracking-tight sm:text-5xl">Find the answer you need.</h1>
             <p class="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-600">Browse published public knowledge from this organization.</p>
             <div class="mt-7 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
-              <div class="flex gap-2">
+              <div class="flex flex-col gap-2 sm:flex-row">
                 <input #searchBox class="rk-input border-0 shadow-none focus:ring-0" placeholder="Search published knowledge..." (keyup.enter)="search(searchBox.value)" />
                 <button class="rk-btn rk-btn-primary shrink-0" (click)="search(searchBox.value)">Search</button>
               </div>
@@ -86,7 +88,7 @@ interface SearchResponse { query: string; results: SearchHit[]; total: number; }
 export class ExploreComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
-  private readonly baseUrl = localStorage.getItem("rk_api_url")?.replace(/\/$/, "") || "http://localhost:8080";
+  private readonly baseUrl = localStorage.getItem("rk_api_url")?.replace(/\/$/, "") || "";
 
   tenant = "";
   articles: ArticleSummary[] = [];

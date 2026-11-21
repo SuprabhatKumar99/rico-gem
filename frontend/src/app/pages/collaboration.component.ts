@@ -130,6 +130,7 @@ export class CollaborationComponent implements OnInit,OnDestroy {
   readonly articleId=this.route.snapshot.paramMap.get('articleId')||'';
   readonly versionId=this.route.snapshot.paramMap.get('versionId')||'';
   editor:Editor|null=null;provider:HocuspocusProvider|null=null;doc:Y.Doc|null=null;private roomName='';
+  private saveTimer:ReturnType<typeof setTimeout>|null=null;private presenceTimer:ReturnType<typeof setInterval>|null=null;private httpSyncMode=false;
   offline:IndexeddbPersistence|null=null;offlineEnabled=localStorage.getItem('rk_collab_offline_cache')==='true';slashOpen=false;
   status='Connecting';syncState='Waiting for document';error='';participants:string[]=[];
   selectedBlockId='';comments:BlockComment[]=[];commentText='';
@@ -138,13 +139,18 @@ export class CollaborationComponent implements OnInit,OnDestroy {
   ngOnInit(){this.connect();this.fetchComments();}
   reconnect(){this.destroyEditor();this.connect();}
   private connect(){
-    this.error='';this.status='Authorizing';
+    this.error='';this.status='Authorizing';this.httpSyncMode=false;
     this.subscriptions.add(this.api.collaborationTicket(this.articleId,this.versionId).subscribe({
       next: ticket=>{
         this.roomName=ticket.room;
+        const name=this.auth.user?.email||'Editor';
+        if(!ticket.websocketUrl){
+          this.httpSyncMode=true;
+          this.initHttpSyncedEditor(name);
+          return;
+        }
         this.doc=new Y.Doc();
         if(this.offlineEnabled)this.offline=new IndexeddbPersistence(ticket.room,this.doc);
-        const name=this.auth.user?.email||'Editor';
         const identity={name,color:'#2563eb'};
         this.provider=new HocuspocusProvider({
           url:ticket.websocketUrl,name:ticket.room,document:this.doc,token:ticket.token,
@@ -171,6 +177,57 @@ export class CollaborationComponent implements OnInit,OnDestroy {
         });
       },error:e=>{this.status='Unavailable';this.error=e.status===409?'This version is no longer an editable draft.':'Unable to authorize editing. Check your role and collaboration service.';}
     }));
+  }
+  private initHttpSyncedEditor(userName:string){
+    this.participants=[userName];
+    this.subscriptions.add(this.api.collaborationSnapshot(this.articleId,this.versionId).subscribe({
+      next: snap=>{
+        const initialContent=snap?.tiptapDoc
+          ? snap.tiptapDoc
+          : Array.isArray(snap?.content?.blocks) && snap.content.blocks.length
+            ? {type:'doc',content:this.contentNodes(snap.content.blocks)}
+            : {type:'doc',content:[{type:'paragraph'}]};
+        this.editor=new Editor({
+          element:this.editorElement.nativeElement,
+          extensions:[StarterKit,Highlight,Image.configure({allowBase64:false}),
+            TableKit,ids,legacy,
+            Placeholder.configure({placeholder:'Start writing…'})],
+          content:initialContent,
+          editorProps:{attributes:{class:'tiptap prose prose-slate max-w-none min-h-[380px] focus:outline-none'},
+            handlePaste:(_view,event)=>this.handleMarkdownPaste(event)},
+          onUpdate:()=>{this.syncState='Changes pending autosave';this.populateSelection();this.updateSlash();this.scheduleHttpSave();},
+          onSelectionUpdate:()=>this.populateSelection()
+        });
+        this.status='Connected';
+        this.syncState='Synced with server';
+        this.populateSelection();
+        this.sendHeartbeat();
+        this.presenceTimer=setInterval(()=>this.sendHeartbeat(),15000);
+      },
+      error:()=>{this.status='Unavailable';this.error='Unable to load document snapshot.';}
+    }));
+  }
+  private scheduleHttpSave(){
+    if(!this.httpSyncMode || !this.editor)return;
+    if(this.saveTimer)clearTimeout(this.saveTimer);
+    this.saveTimer=setTimeout(()=>{
+      if(!this.editor)return;
+      const tiptapDoc=this.editor.getJSON();
+      this.api.collaborationSave(this.articleId,this.versionId,{tiptapDoc}).subscribe({
+        next:()=>{this.syncState='Synced with server';},
+        error:()=>{this.syncState='Autosave failed';}
+      });
+    },600);
+  }
+  private sendHeartbeat(){
+    if(!this.httpSyncMode)return;
+    this.api.collaborationHeartbeat(this.articleId,this.versionId).subscribe({
+      next:list=>{
+        const names=Array.isArray(list)?list.map((p:any)=>String(p?.email||p?.name||'')).filter(Boolean):[];
+        this.participants=names.length?[...new Set(names)]:[this.auth.user?.email||'Editor'];
+      },
+      error:()=>undefined
+    });
   }
   private updateSlash(){
     if(!this.editor)return;
@@ -254,9 +311,10 @@ export class CollaborationComponent implements OnInit,OnDestroy {
   upload(event:Event){
     const file=(event.target as HTMLInputElement).files?.[0];if(!file)return;
     this.api.uploadAsset(file,this.articleId).subscribe({next:asset=>{
-      if(file.type.startsWith('image/') && asset.downloadUrl && /^https:\/\//.test(asset.downloadUrl))
+      const validUrl=asset.downloadUrl && (/^https?:\/\//i.test(asset.downloadUrl) || asset.downloadUrl.startsWith('/'));
+      if(file.type.startsWith('image/') && validUrl)
         this.editor?.chain().focus().setImage({src:asset.downloadUrl,alt:file.name}).run();
-      else if(asset.downloadUrl && /^https:\/\//.test(asset.downloadUrl))
+      else if(validUrl)
         this.editor?.chain().focus().insertContent({type:'text',text:file.name,marks:[{type:'link',attrs:{href:asset.downloadUrl}}]}).run();
       this.error='';
     },error:()=>this.error='Upload failed. Verify media storage and file permissions.'});
@@ -285,6 +343,11 @@ export class CollaborationComponent implements OnInit,OnDestroy {
     const blob=new Blob([JSON.stringify(content,null,2)],{type:'application/json'});
     const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=`ricoz-${this.versionId}.json`;link.click();URL.revokeObjectURL(url);
   }
-  private destroyEditor(){this.offline?.destroy();this.offline=null;this.editor?.destroy();this.editor=null;this.provider?.destroy();this.provider=null;this.doc?.destroy();this.doc=null;this.roomName='';}
+  private destroyEditor(){
+    if(this.saveTimer){clearTimeout(this.saveTimer);this.saveTimer=null;}
+    if(this.presenceTimer){clearInterval(this.presenceTimer);this.presenceTimer=null;}
+    if(this.httpSyncMode){this.api.collaborationLeave(this.articleId,this.versionId).subscribe({error:()=>undefined});}
+    this.offline?.destroy();this.offline=null;this.editor?.destroy();this.editor=null;this.provider?.destroy();this.provider=null;this.doc?.destroy();this.doc=null;this.roomName='';
+  }
   ngOnDestroy(){this.subscriptions.unsubscribe();this.destroyEditor();}
 }

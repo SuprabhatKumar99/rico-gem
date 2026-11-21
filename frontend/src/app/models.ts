@@ -447,3 +447,52 @@ export interface ReusableBlock {id:string;name:string;block:Record<string,unknow
 export interface SavedArticleTemplate {id:string;key:string;name:string;description:string|null;content:{blocks:Record<string,unknown>[]};}
 
 export interface VerificationEvent {action:string;actorId:string|null;details:string|null;at:string;}
+
+export interface KnowledgeRequest {
+  id: string;
+  title: string;
+  description: string;
+  categoryId: string | null;
+  priority: "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+  status: "OPEN" | "IN_PROGRESS" | "DRAFT_CREATED" | "COMPLETED" | "DECLINED";
+  source: "INTERNAL" | "SUPPORT" | "CUSTOMER";
+  requesterEmail: string;
+  assigneeEmail: string | null;
+  upvotes: number;
+  linkedArticleId: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PlaybookStep {
+  id: string;
+  prompt: string;
+  guidance?: string;
+  options?: { label: string; nextStepId: string }[];
+  resolution?: {
+    title: string;
+    summary: string;
+    articleSlug?: string;
+    actionLabel?: string;
+  };
+}
+
+export interface Playbook {
+  id: string;
+  title: string;
+  summary: string;
+  category: string;
+  published: boolean;
+  runsCount: number;
+  resolvedCount: number;
+  updatedAt: string;
+  steps: PlaybookStep[];
+}
+
+export interface BookmarkedArticle {
+  slug: string;
+  title: string;
+  tenantSlug: string;
+  savedAt: string;
+}
+

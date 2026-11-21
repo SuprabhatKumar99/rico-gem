@@ -4,6 +4,8 @@ import { RouterLink, RouterLinkActive, RouterOutlet } from "@angular/router";
 import { AuthService } from "../core/auth.service";
 import { ApiService } from "../core/api.service";
 import { OnboardingComponent, OnboardingStep } from "../shared/onboarding";
+import { CommandPaletteComponent, PaletteNavItem } from "../shared/command-palette.component";
+import { ThemeToggleComponent } from "../shared/theme-toggle.component";
 import { ArticlePerformance, KnowledgeGap, StaleContent, AppNotification } from "../models";
 import { ArticleGradeBadgeComponent, ArticleGradeInfo, gradeArticle } from "./articles.component";
 
@@ -57,6 +59,8 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
     RouterLink,
     RouterLinkActive,
     OnboardingComponent,
+    CommandPaletteComponent,
+    ThemeToggleComponent,
     ArticleGradeBadgeComponent
   ],
   styles: [
@@ -89,12 +93,22 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
         class="fixed inset-y-0 left-0 z-40 flex w-72 flex-col border-r border-slate-200 bg-white transition-transform lg:translate-x-0"
         [class.-translate-x-full]="!mobileOpen"
       >
-        <div class="flex h-16 items-center gap-3 border-b border-slate-200 px-5">
-          <div class="grid h-9 w-9 place-items-center rounded-xl bg-slate-900 font-black text-white">R</div>
-          <div>
-            <p class="font-bold tracking-tight">RicozKnow</p>
-            <p class="text-[11px] text-slate-400">Knowledge Studio</p>
+        <div class="flex h-16 items-center justify-between gap-3 border-b border-slate-200 px-5">
+          <div class="flex items-center gap-3">
+            <div class="grid h-9 w-9 place-items-center rounded-xl bg-slate-900 font-black text-white">R</div>
+            <div>
+              <p class="font-bold tracking-tight">RicozKnow</p>
+              <p class="text-[11px] text-slate-400">Knowledge Studio</p>
+            </div>
           </div>
+          <button
+            type="button"
+            class="grid h-9 w-9 place-items-center rounded-xl border border-slate-200 text-sm text-slate-600 hover:bg-slate-50 lg:hidden"
+            aria-label="Close navigation"
+            (click)="mobileOpen = false"
+          >
+            ✕
+          </button>
         </div>
 
         <nav class="flex-1 overflow-y-auto px-3 py-5">
@@ -129,9 +143,26 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
           </div>
         </nav>
 
-        <div class="border-t border-slate-200 p-4">
+        <div class="space-y-3 border-t border-slate-200 p-4">
+          <div class="grid grid-cols-2 gap-2 sm:hidden">
+            <a
+              routerLink="/portal"
+              [queryParams]="{ tenant: tenantSlug }"
+              class="rk-btn rk-btn-secondary px-2 text-xs"
+              (click)="mobileOpen = false"
+            >
+              Open portal
+            </a>
+            <button
+              type="button"
+              class="rk-btn rk-btn-secondary px-2 text-xs"
+              (click)="auth.logout()"
+            >
+              Sign out
+            </button>
+          </div>
           <div class="flex items-center gap-3 rounded-xl bg-slate-50 p-3">
-            <div class="grid h-9 w-9 place-items-center rounded-full bg-slate-200 text-sm font-bold">
+            <div class="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-slate-200 text-sm font-bold">
               {{ initials }}
             </div>
             <div class="min-w-0 flex-1">
@@ -143,21 +174,46 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
       </aside>
 
       <header class="sticky top-0 z-20 border-b border-slate-200 bg-white/95 backdrop-blur lg:ml-72">
-        <div class="flex h-16 items-center justify-between gap-4 px-4 sm:px-6">
-          <button
-            class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 lg:hidden"
-            aria-label="Open navigation"
-            (click)="mobileOpen = true"
-          >
-            ☰
-          </button>
+        <div class="flex h-16 items-center justify-between gap-2 px-3 sm:gap-4 sm:px-6">
+          <div class="flex items-center gap-2 lg:hidden">
+            <button
+              type="button"
+              class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-base hover:bg-slate-50"
+              aria-label="Open navigation"
+              (click)="mobileOpen = true"
+            >
+              ☰
+            </button>
+            <span class="text-sm font-bold tracking-tight sm:hidden">RicozKnow</span>
+          </div>
 
           <div class="hidden min-w-0 lg:block">
             <p class="text-xs font-medium text-slate-400">Knowledge Studio</p>
             <p class="truncate text-sm font-semibold">Governed knowledge for your organization</p>
           </div>
 
-          <div class="ml-auto flex items-center gap-2">
+          <div class="ml-auto flex items-center gap-1.5 sm:gap-2">
+            <button
+              type="button"
+              class="grid h-10 w-10 place-items-center rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-600 hover:bg-slate-50 sm:hidden"
+              aria-label="Open quick jump command palette"
+              (click)="palette.show()"
+            >
+              ⌘
+            </button>
+
+            <button
+              type="button"
+              class="hidden items-center gap-2 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-slate-300 hover:bg-white sm:inline-flex"
+              aria-label="Open quick jump command palette"
+              (click)="palette.show()"
+            >
+              <span>Quick jump…</span>
+              <kbd class="rounded border border-slate-200 bg-white px-1.5 py-0.5 text-[10px] font-bold text-slate-400">⌘K</kbd>
+            </button>
+
+            <rk-theme-toggle [compact]="true" />
+
             <div *ngIf="auth.hasAnyRole(['ADMIN','EDITOR','REVIEWER'])" class="relative">
               <button
                 type="button"
@@ -178,11 +234,19 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
 
               <div
                 *ngIf="notifOpen"
-                class="rk-card absolute right-0 z-30 mt-2 max-h-[32rem] w-96 overflow-y-auto"
+                class="rk-card fixed inset-x-3 top-[4.5rem] z-30 max-h-[min(32rem,75vh)] overflow-y-auto sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96"
               >
-                <p class="border-b border-slate-200 px-4 py-3 text-sm font-bold">
-                  Recent activity
-                </p>
+                <div class="flex items-center justify-between border-b border-slate-200 px-4 py-3">
+                  <p class="text-sm font-bold">Recent activity</p>
+                  <button
+                    type="button"
+                    class="grid h-7 w-7 place-items-center rounded-lg text-xs text-slate-400 hover:bg-slate-100 hover:text-slate-700 sm:hidden"
+                    aria-label="Close notifications"
+                    (click)="notifOpen = false"
+                  >
+                    ✕
+                  </button>
+                </div>
 
                 <div *ngIf="!notifications.length" class="px-4 py-8 text-center text-sm text-slate-500">
                   Nothing needs attention right now.
@@ -248,8 +312,8 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
               </div>
             </div>
 
-            <a routerLink="/portal" [queryParams]="{ tenant: tenantSlug }" class="rk-btn rk-btn-secondary">Open portal</a>
-            <button class="rk-btn rk-btn-secondary" (click)="auth.logout()">Sign out</button>
+            <a routerLink="/portal" [queryParams]="{ tenant: tenantSlug }" class="rk-btn rk-btn-secondary hidden sm:inline-flex">Open portal</a>
+            <button type="button" class="rk-btn rk-btn-secondary hidden sm:inline-flex" (click)="auth.logout()">Sign out</button>
           </div>
         </div>
       </header>
@@ -259,6 +323,13 @@ const URGENCY_LABELS: Record<NotificationUrgency, string> = {
           <router-outlet />
         </div>
       </main>
+
+      <rk-command-palette
+        #palette
+        [navItems]="paletteItems"
+        [tenantSlug]="tenantSlug"
+        [canCreateArticle]="auth.hasAnyRole(['ADMIN', 'EDITOR'])"
+      />
 
       <rk-onboarding
         [steps]="onboardingSteps"
@@ -285,6 +356,8 @@ export class ShellComponent implements OnInit {
   readonly workspaceNav: NavItem[] = [
     { label: "Dashboard", path: "/dashboard" },
     { label: "Articles", path: "/articles" },
+    { label: "Knowledge requests", path: "/requests", roles: ["ADMIN", "EDITOR", "REVIEWER"] },
+    { label: "Guided playbooks", path: "/playbooks", roles: ["ADMIN", "EDITOR", "REVIEWER", "AGENT_VIEWER"] },
     { label: "Review queue", path: "/review", roles: ["ADMIN", "REVIEWER"] },
     { label: "Categories", path: "/categories" },
     { label: "Knowledge sources", path: "/knowledge-sources", roles: ["ADMIN", "EDITOR", "REVIEWER"] },
@@ -466,6 +539,17 @@ export class ShellComponent implements OnInit {
 
   canShow(item: NavItem): boolean {
     return !item.roles || this.auth.hasAnyRole(item.roles);
+  }
+
+  get paletteItems(): PaletteNavItem[] {
+    return [
+      ...this.workspaceNav
+        .filter((item) => this.canShow(item))
+        .map((item) => ({ label: item.label, path: item.path, section: "Workspace" as const })),
+      ...this.adminNav
+        .filter((item) => this.canShow(item))
+        .map((item) => ({ label: item.label, path: item.path, section: "Administration" as const }))
+    ];
   }
 
   showOnboarding = !localStorage.getItem("rk_onboarded");

@@ -48,7 +48,7 @@ interface ArticleDetail { id: string; slug: string; title: string; categoryId: s
 export class ExploreArticleComponent implements OnInit {
   private readonly http = inject(HttpClient);
   private readonly route = inject(ActivatedRoute);
-  private readonly baseUrl = localStorage.getItem("rk_api_url")?.replace(/\/$/, "") || "http://localhost:8080";
+  private readonly baseUrl = localStorage.getItem("rk_api_url")?.replace(/\/$/, "") || "";
 
   tenant = "";
   article?: ArticleDetail;

@@ -3,17 +3,21 @@ import { Component } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { RouterLink } from "@angular/router";
 import { ApiService } from "../core/api.service";
+import { ThemeToggleComponent } from "../shared/theme-toggle.component";
 
 @Component({
   selector: "rk-register",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, ThemeToggleComponent],
   template: `
     <div class="min-h-screen bg-slate-950 px-4 py-10 sm:py-16">
-      <div class="mx-auto max-w-3xl rounded-3xl bg-white p-6 sm:p-10">
-        <div class="flex items-center gap-3">
-          <div class="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 font-black text-white">R</div>
-          <span class="text-xl font-bold">RicozKnow</span>
+      <div class="mx-auto max-w-3xl rounded-3xl border border-slate-200 bg-white p-6 sm:p-10">
+        <div class="flex items-center justify-between gap-3">
+          <a routerLink="/" class="flex items-center gap-3">
+            <div class="grid h-10 w-10 place-items-center rounded-xl bg-slate-900 font-black text-white">R</div>
+            <span class="text-xl font-bold">RicozKnow</span>
+          </a>
+          <rk-theme-toggle [compact]="true" />
         </div>
 
         <div class="mt-10">

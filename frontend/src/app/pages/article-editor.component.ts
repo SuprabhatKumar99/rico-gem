@@ -218,6 +218,58 @@ interface EditorBlock {
                 <pre *ngIf="showJson" class="mt-3 overflow-auto text-xs leading-5 text-slate-600">{{ contentJson }}</pre>
               </div>
             </div>
+
+            <div *ngIf="article" class="p-6 sm:p-8">
+              <div *ngIf="blocks.length === 0" class="rounded-xl border border-dashed border-slate-300 p-8 text-center">
+                <p class="font-semibold text-slate-800">No content blocks yet</p>
+                <p class="mt-1 text-sm text-slate-500">Open the TipTap live editor above to author rich content for this draft.</p>
+              </div>
+
+              <div class="space-y-4">
+                <article
+                  *ngFor="let block of blocks"
+                  class="rounded-xl border border-slate-200 bg-white p-4"
+                  [class.border-indigo-500]="selectedBlockId === block.id"
+                >
+                  <div class="mb-2 flex items-center justify-between gap-2">
+                    <span class="text-xs font-bold uppercase tracking-widest text-slate-400">{{ block.type }}</span>
+                    <button
+                      *ngIf="version && block.id"
+                      class="text-xs font-semibold text-indigo-600 hover:text-indigo-800"
+                      type="button"
+                      (click)="selectReviewBlock(block.id!)"
+                    >
+                      Review comments ({{ commentsForBlock(block.id!).length }})
+                    </button>
+                  </div>
+
+                  <h3
+                    *ngIf="block.type === 'heading'"
+                    class="font-bold text-slate-950"
+                    [class.text-2xl]="block.level === 1"
+                    [class.text-xl]="block.level === 2"
+                    [class.text-lg]="block.level === 3 || block.level === 4"
+                  >
+                    {{ block.text }}
+                  </h3>
+
+                  <p *ngIf="block.type === 'paragraph'" class="whitespace-pre-wrap text-base leading-7 text-slate-700">
+                    {{ block.text }}
+                  </p>
+
+                  <pre *ngIf="block.type === 'code'" class="overflow-auto rounded-xl bg-slate-950 p-4 font-mono text-sm leading-6 text-white">{{ block.text }}</pre>
+
+                  <ul *ngIf="block.type === 'list'" class="list-disc space-y-1.5 pl-6 text-base leading-7 text-slate-700">
+                    <li *ngFor="let item of block.items">{{ item }}</li>
+                  </ul>
+
+                  <figure *ngIf="block.type === 'image' && block.url" class="space-y-2">
+                    <img [src]="block.url" [alt]="block.alt || ''" class="max-h-96 rounded-xl border border-slate-200 object-contain" />
+                    <figcaption *ngIf="block.alt" class="text-sm text-slate-500">{{ block.alt }}</figcaption>
+                  </figure>
+                </article>
+              </div>
+            </div>
           </ng-template>
         </section>
 

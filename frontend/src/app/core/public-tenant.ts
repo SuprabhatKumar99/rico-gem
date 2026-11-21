@@ -19,8 +19,8 @@ export function resolvePublicTenant(): string {
 
   const hostname = window.location.hostname.toLowerCase();
 
-  if (hostname === "localhost" || hostname === "127.0.0.1") {
-    return "";
+  if (hostname === "localhost" || hostname === "127.0.0.1" || hostname.endsWith(".run.app")) {
+    return "demo";
   }
 
   const parts = hostname.split(".");
@@ -30,5 +30,5 @@ export function resolvePublicTenant(): string {
     return parts[0];
   }
 
-  return "";
+  return "demo";
 }

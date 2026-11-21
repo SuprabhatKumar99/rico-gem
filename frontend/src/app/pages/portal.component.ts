@@ -3,14 +3,18 @@ import { Component, OnInit } from "@angular/core";
 import { FormsModule } from "@angular/forms";
 import { Router, RouterLink } from "@angular/router";
 import { ApiService } from "../core/api.service";
-import { Category, PortalArticleSummary, SearchResult, Tenant } from "../models";
+import { BookmarkedArticle, Category, PortalArticleSummary, SearchResult, Tenant } from "../models";
+import { PortalAssistantComponent } from "../shared/portal-assistant.component";
+import { ThemeToggleComponent } from "../shared/theme-toggle.component";
+
+const BOOKMARKS_KEY = "rk_portal_bookmarks";
 
 @Component({
   selector: "rk-portal",
   standalone: true,
-  imports: [CommonModule, FormsModule, RouterLink],
+  imports: [CommonModule, FormsModule, RouterLink, PortalAssistantComponent, ThemeToggleComponent],
   template: `
-    <a *ngIf="!invitationToken" class="fixed bottom-3 left-3 z-30 rounded bg-slate-900 px-3 py-2 text-white text-xs" [routerLink]="['/portal/history']" [queryParams]="{tenant:tenant?.slug}">My support history</a>
+    <a *ngIf="!invitationToken" class="fixed bottom-4 left-3 z-30 rounded-xl border border-slate-700 bg-slate-900 px-3 py-2.5 text-[11px] font-semibold text-white shadow-lg transition hover:opacity-95 sm:left-4 sm:px-3.5 sm:text-xs" [routerLink]="['/portal/history']" [queryParams]="{tenant:tenant?.slug}">Support history</a>
     <div *ngIf="invitationToken; else knowledgePortal" class="min-h-screen bg-slate-50 px-4 py-10 sm:py-16">
       <div class="mx-auto max-w-lg">
         <section class="rk-card p-7 sm:p-9">
@@ -121,36 +125,43 @@ import { Category, PortalArticleSummary, SearchResult, Tenant } from "../models"
 
     <ng-template #knowledgePortal>
       <div class="min-h-screen bg-white">
-        <header class="border-b border-slate-200">
-          <div class="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
-            <div class="flex min-w-0 items-center gap-3">
+        <header class="border-b border-slate-200 bg-white">
+          <div class="mx-auto flex max-w-6xl items-center justify-between gap-2 px-4 py-4 sm:gap-4 sm:px-6 sm:py-5">
+            <div class="flex min-w-0 items-center gap-2.5 sm:gap-3">
               <img
                 *ngIf="tenant?.logoUrl"
                 [src]="tenant?.logoUrl"
                 alt=""
-                class="h-9 w-9 rounded-xl object-cover"
+                class="h-9 w-9 shrink-0 rounded-xl object-cover"
               />
               <div
                 *ngIf="!tenant?.logoUrl"
-                class="grid h-9 w-9 place-items-center rounded-xl font-black text-white"
+                class="grid h-9 w-9 shrink-0 place-items-center rounded-xl font-black text-white"
                 [style.background]="tenant?.primaryColor || '#0f172a'"
               >
                 R
               </div>
               <div class="min-w-0">
-                <p class="truncate font-bold">{{ tenant?.portalTitle || tenant?.name || "Knowledge Portal" }}</p>
+                <p class="truncate text-sm font-bold sm:text-base">{{ tenant?.portalTitle || tenant?.name || "Knowledge Portal" }}</p>
                 <p class="truncate text-xs text-slate-500">{{ tenant?.name }}</p>
               </div>
             </div>
 
-            <div class="flex items-center gap-2">
-              <button type="button" class="rk-btn rk-btn-secondary" (click)="openSupport()">Contact support</button>
-              <button type="button" class="rk-btn rk-btn-secondary" (click)="showCustomerLogin=true">{{customerEmail ? "Account" : "Customer sign in"}}</button>
+            <div class="flex shrink-0 items-center gap-1.5 sm:gap-2">
+              <rk-theme-toggle [compact]="true" />
+              <button type="button" class="rk-btn rk-btn-secondary px-2.5 text-xs sm:px-3.5 sm:text-sm" (click)="openSupport()">
+                <span class="sm:hidden">Support</span>
+                <span class="hidden sm:inline">Contact support</span>
+              </button>
+              <button type="button" class="rk-btn rk-btn-secondary px-2.5 text-xs sm:px-3.5 sm:text-sm" (click)="showCustomerLogin=true">
+                <span class="sm:hidden">{{ customerEmail ? "Account" : "Sign in" }}</span>
+                <span class="hidden sm:inline">{{ customerEmail ? "Account" : "Customer sign in" }}</span>
+              </button>
             </div>
           </div>
         </header>
 
-        <main class="mx-auto max-w-6xl px-4 py-14 sm:px-6">
+        <main class="mx-auto max-w-6xl px-4 pb-24 pt-10 sm:px-6 sm:pt-14">
           <section class="mx-auto max-w-3xl text-center">
             <p class="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Knowledge base</p>
             <h1 class="mt-4 text-4xl font-bold tracking-tight sm:text-5xl">How can we help?</h1>
@@ -166,7 +177,13 @@ import { Category, PortalArticleSummary, SearchResult, Tenant } from "../models"
                 placeholder="Search for an answer…"
                 aria-label="Search knowledge base"
               />
-              <button class="rk-btn text-white sm:px-6" [style.background]="tenant?.primaryColor || '#0f172a'">Search</button>
+              <button
+                class="rk-btn rk-btn-primary sm:px-6"
+                [style.background]="customAccentColor"
+                [class.text-white]="!!customAccentColor"
+              >
+                Search
+              </button>
             </form>
           </section>
 
@@ -177,14 +194,47 @@ import { Category, PortalArticleSummary, SearchResult, Tenant } from "../models"
                 <span class="text-sm text-slate-700">Signed in as {{ customerEmail }}</span>
                 <button type="button" class="rk-btn rk-btn-secondary" (click)="signOutCustomer()" [disabled]="customerBusy">Sign out</button>
               </div>
-              <div *ngIf="!customerSignedIn && !magicSent" class="mt-4 flex gap-2">
+              <div *ngIf="!customerSignedIn && !magicSent" class="mt-4 flex flex-col gap-2 sm:flex-row">
                 <input class="rk-input" [(ngModel)]="customerEmail" type="email" name="customerEmail" placeholder="you@example.com">
-                <button class="rk-btn rk-btn-primary" (click)="requestMagicLink()" [disabled]="customerBusy">Email me a link</button>
+                <button class="rk-btn rk-btn-primary shrink-0" (click)="requestMagicLink()" [disabled]="customerBusy">Email me a link</button>
               </div>
               <p *ngIf="!customerSignedIn && magicSent" class="mt-3 text-sm text-emerald-700">Check your email for a secure sign-in link.</p>
             </section>
 
           <p *ngIf="curatedLoadError" role="alert" class="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">Featured or pinned articles could not be loaded. Please refresh the page or contact support if this continues.</p>
+
+          <section *ngIf="savedArticles.length" class="mt-10 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
+            <div class="flex items-center justify-between gap-4">
+              <div>
+                <h2 class="text-base font-bold">Saved articles</h2>
+                <p class="mt-0.5 text-xs text-slate-500">Articles you bookmarked for quick reference on this device.</p>
+              </div>
+              <span class="text-xs font-semibold text-slate-500">{{ savedArticles.length }} saved</span>
+            </div>
+            <div class="mt-4 grid gap-3 md:grid-cols-2">
+              <div
+                *ngFor="let saved of savedArticles"
+                class="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white px-4 py-3"
+              >
+                <a
+                  [routerLink]="['/portal/article', saved.slug]"
+                  [queryParams]="{ tenant: saved.tenantSlug || tenantSlug || 'demo' }"
+                  class="min-w-0 flex-1 text-sm font-semibold text-slate-900 hover:underline"
+                >
+                  {{ saved.title }}
+                </a>
+                <button
+                  type="button"
+                  class="text-xs font-semibold text-slate-400 hover:text-rose-600"
+                  [attr.aria-label]="'Remove bookmark ' + saved.title"
+                  (click)="removeBookmark(saved.slug)"
+                >
+                  Remove
+                </button>
+              </div>
+            </div>
+          </section>
+
           <section *ngIf="featuredArticles.length" class="mt-12">
             <div class="flex items-center justify-between gap-4">
               <div>
@@ -260,7 +310,7 @@ import { Category, PortalArticleSummary, SearchResult, Tenant } from "../models"
               <div>
                 <h2 class="text-lg font-bold">{{ searchResult ? "Search results" : "Recommended articles" }}</h2>
                 <p *ngIf="searchResult" class="mt-1 text-sm text-slate-500">
-                  <span class="font-semibold" [style.color]="tenant?.primaryColor || '#0f172a'">
+                  <span class="font-semibold text-slate-950">
                     {{ searchResult.total }}
                   </span>
                   results for “{{ searchResult.query }}”
@@ -292,6 +342,10 @@ import { Category, PortalArticleSummary, SearchResult, Tenant } from "../models"
             </div>
           </section>
         </main>
+        <rk-portal-assistant
+          [tenantSlug]="tenantSlug || tenant?.slug || 'demo'"
+          [primaryColor]="tenant?.primaryColor || '#0f172a'"
+        />
       </div>
     </ng-template>
   `
@@ -303,6 +357,7 @@ export class PortalComponent implements OnInit {
   curatedLoadError = false;
   featuredArticles: PortalArticleSummary[] = [];
   pinnedArticles: PortalArticleSummary[] = [];
+  savedArticles: BookmarkedArticle[] = [];
   searchResult?: SearchResult;
   query = "";
   popularSearches: string[] = [];
@@ -358,7 +413,23 @@ export class PortalComponent implements OnInit {
       }
     });
 
+    this.loadSavedArticles();
     this.reloadPortalContent();
+  }
+
+  private loadSavedArticles(): void {
+    try {
+      const raw = localStorage.getItem(BOOKMARKS_KEY);
+      const parsed = raw ? JSON.parse(raw) : [];
+      this.savedArticles = Array.isArray(parsed) ? parsed : [];
+    } catch {
+      this.savedArticles = [];
+    }
+  }
+
+  removeBookmark(slug: string): void {
+    this.savedArticles = this.savedArticles.filter((b) => b.slug !== slug);
+    localStorage.setItem(BOOKMARKS_KEY, JSON.stringify(this.savedArticles));
   }
 
   acceptInvitation(): void {
@@ -522,6 +593,14 @@ export class PortalComponent implements OnInit {
 
   get tenantSlug(): string | null {
     return new URLSearchParams(window.location.search).get("tenant");
+  }
+
+  get customAccentColor(): string | null {
+    const color = this.tenant?.primaryColor?.trim().toLowerCase();
+    if (!color || color === "#0f172a" || color === "#000000" || color === "#111827") {
+      return null;
+    }
+    return this.tenant!.primaryColor!;
   }
 
   private invitationErrorMessage(error: unknown): string {

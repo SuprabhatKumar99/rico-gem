@@ -5,9 +5,25 @@
     <meta charset="utf-8">
     <base href="/">
     <title>RicozKnow</title>
+    <meta name="description" content="Governed enterprise knowledge platform for creating, reviewing, publishing, and searching organizational knowledge for teams, customers, and AI agents.">
+    <meta property="og:title" content="RicozKnow">
+    <meta property="og:description" content="Governed enterprise knowledge platform for creating, reviewing, publishing, and searching organizational knowledge for teams, customers, and AI agents.">
     <link rel="icon" type="image/png" href="favicon.svg">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="theme-color" content="#0f172a">
+    <meta name="theme-color" content="#f8fafc">
+    <script>
+      (function () {
+        try {
+          var saved = (localStorage.getItem("rk_theme_mode") || "system").toLowerCase();
+          var prefersDark = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
+          var isDark = saved === "dark" || (saved === "system" && prefersDark);
+          document.documentElement.classList.toggle("dark", isDark);
+          document.documentElement.setAttribute("data-theme", isDark ? "dark" : "light");
+          var meta = document.querySelector('meta[name="theme-color"]');
+          if (meta) meta.setAttribute("content", isDark ? "#0b1120" : "#f8fafc");
+        } catch (e) {}
+      })();
+    </script>
   </head>
   <body>
     <app-root></app-root>
